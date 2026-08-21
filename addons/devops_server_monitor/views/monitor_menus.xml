@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_devops_monitor_root"
+              name="DevOps Monitor"
+              web_icon="devops_server_monitor,static/description/icon.png"
+              sequence="90"
+              groups="devops_server_monitor.group_devops_monitor_user"/>
+
+    <menuitem id="menu_devops_monitor_dashboard"
+              name="Dashboard"
+              parent="menu_devops_monitor_root"
+              action="action_devops_monitor_client_dashboard"
+              sequence="10"/>
+
+    <menuitem id="menu_devops_monitor_history"
+              name="History"
+              parent="menu_devops_monitor_root"
+              action="action_devops_monitor_history"
+              sequence="20"/>
+
+</odoo>

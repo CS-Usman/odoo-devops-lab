@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>DevOps Server Monitor</title>
+</head>
+<body>
+    <h1>DevOps Server Monitor</h1>
+    <p>
+        Dashboard module for the odoo-devops-lab project. Tracks CPU, RAM, disk,
+        network and disk I/O, PostgreSQL health, Odoo filestore usage, and Docker
+        container stats when the Docker CLI is available.
+    </p>
+    <ul>
+        <li><strong>DevOps Monitor → Dashboard</strong> — latest health snapshot</li>
+        <li><strong>History / Trends</strong> — time-series graphs from cron snapshots</li>
+        <li><code>GET /devops/health</code> — lightweight CI check</li>
+        <li><code>GET /devops/metrics</code> — full JSON metrics payload</li>
+    </ul>
+    <p>
+        Optional: install <code>psutil</code> in the Odoo environment for richer host metrics.
+        Without it, the module falls back to reading <code>/proc</code> on Linux.
+    </p>
+    <p>
+        To collect Docker container stats from Odoo running in Docker, mount
+        <code>/var/run/docker.sock</code> and install the Docker CLI in the container.
+    </p>
+</body>
+</html>

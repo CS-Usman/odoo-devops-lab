@@ -1,0 +1,73 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_rsa.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Odoo
+*.log
+filestore/
+sessions/
+.odoo_data/
+
+# Docker
+docker-compose.override.yml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Node (if added later)
+node_modules/
+
+# Backups & temp
+*.bak
+*.tmp
+*.sql
+*.sql.gz
+*.dump
+
+# Coverage & test
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Ansible
+*.retry
+
+# Local notes (optional — remove this line if you want to commit personal scratch notes)
+# scratch/

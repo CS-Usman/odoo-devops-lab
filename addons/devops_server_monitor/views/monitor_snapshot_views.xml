@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- OWL client dashboard (main entry) -->
+    <record id="action_devops_monitor_client_dashboard" model="ir.actions.client">
+        <field name="name">Server Health Dashboard</field>
+        <field name="tag">devops_server_monitor.dashboard</field>
+        <field name="target">current</field>
+    </record>
+
+    <!-- Dashboard form (snapshot detail) -->
+    <record id="view_devops_monitor_snapshot_dashboard" model="ir.ui.view">
+        <field name="name">devops.monitor.snapshot.dashboard</field>
+        <field name="model">devops.monitor.snapshot</field>
+        <field name="priority">1</field>
+        <field name="arch" type="xml">
+            <form string="Snapshot Detail" create="false">
+                <header>
+                    <field name="overall_status" widget="statusbar"
+                           statusbar_visible="ok,warning,critical,unknown"/>
+                    <button name="action_collect_now" type="object"
+                            string="Refresh Metrics" class="btn-primary"
+                            icon="fa-refresh"
+                            title="Collect live CPU, RAM, disk, DB, filestore and Docker metrics now"
+                            groups="devops_server_monitor.group_devops_monitor_admin"/>
+                    <button name="action_open_owl_dashboard" type="object"
+                            string="Open Live Dashboard" class="btn-secondary"
+                            icon="fa-tachometer"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_history" type="object"
+                                class="oe_stat_button" icon="fa-history">
+                            <field name="snapshot_count" widget="statinfo" string="Snapshots"/>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1><field name="hostname" readonly="1"/></h1>
+                        <h3 class="text-muted">Collected: <field name="collected_at" readonly="1"/></h3>
+                    </div>
+
+                    <group>
+                        <group string="Host Health">
+                            <field name="host_status" widget="badge"
+                                   decoration-success="host_status == 'ok'"
+                                   decoration-warning="host_status == 'warning'"
+                                   decoration-danger="host_status == 'critical'"/>
+                            <field name="cpu_percent" widget="progressbar"/>
+                            <field name="memory_percent" widget="progressbar"/>
+                            <field name="load_1"/>
+                            <field name="load_5"/>
+                            <field name="load_15"/>
+                        </group>
+                        <group string="Storage and I/O">
+                            <field name="disk_percent" widget="progressbar"/>
+                            <field name="disk_read_mb"/>
+                            <field name="disk_write_mb"/>
+                            <field name="network_rx_mb"/>
+                            <field name="network_tx_mb"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Database">
+                            <field name="db_status" widget="badge"
+                                   decoration-success="db_status == 'ok'"
+                                   decoration-warning="db_status == 'warning'"
+                                   decoration-danger="db_status == 'critical'"/>
+                            <field name="db_name"/>
+                            <field name="db_size_mb"/>
+                            <field name="db_connections"/>
+                            <field name="db_message"/>
+                        </group>
+                        <group string="Filestore">
+                            <field name="filestore_status" widget="badge"/>
+                            <field name="filestore_percent" widget="progressbar"/>
+                            <field name="filestore_path"/>
+                            <field name="filestore_file_count"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Containers" name="containers">
+                            <field name="docker_available"/>
+                            <field name="container_count"/>
+                            <field name="container_line_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="cpu_percent" widget="progressbar"/>
+                                    <field name="memory_percent" widget="progressbar"/>
+                                    <field name="network_io"/>
+                                    <field name="block_io"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- History tree -->
+    <record id="view_devops_monitor_snapshot_tree" model="ir.ui.view">
+        <field name="name">devops.monitor.snapshot.tree</field>
+        <field name="model">devops.monitor.snapshot</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="overall_status == 'ok'"
+                  decoration-warning="overall_status == 'warning'"
+                  decoration-danger="overall_status == 'critical'">
+                <field name="collected_at"/>
+                <field name="hostname"/>
+                <field name="overall_status" widget="badge"/>
+                <field name="cpu_percent"/>
+                <field name="memory_percent"/>
+                <field name="disk_percent"/>
+                <field name="db_latency_ms"/>
+                <field name="db_status"/>
+                <field name="container_count"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_devops_monitor_snapshot_form" model="ir.ui.view">
+        <field name="name">devops.monitor.snapshot.form</field>
+        <field name="model">devops.monitor.snapshot</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <form string="Monitor Snapshot">
+                <header>
+                    <field name="overall_status" widget="statusbar"
+                           statusbar_visible="ok,warning,critical,unknown"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="collected_at"/>
+                        <field name="hostname"/>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="cpu_percent"/>
+                            <field name="memory_percent"/>
+                            <field name="disk_percent"/>
+                        </group>
+                        <group>
+                            <field name="db_status"/>
+                            <field name="db_latency_ms"/>
+                            <field name="filestore_percent"/>
+                        </group>
+                    </group>
+                    <field name="container_line_ids">
+                        <tree>
+                            <field name="name"/>
+                            <field name="cpu_percent"/>
+                            <field name="memory_percent"/>
+                        </tree>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_devops_monitor_snapshot_search" model="ir.ui.view">
+        <field name="name">devops.monitor.snapshot.search</field>
+        <field name="model">devops.monitor.snapshot</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="hostname"/>
+                <field name="overall_status"/>
+                <filter string="Healthy" name="filter_ok" domain="[('overall_status', '=', 'ok')]"/>
+                <filter string="Warning" name="filter_warning" domain="[('overall_status', '=', 'warning')]"/>
+                <filter string="Critical" name="filter_critical" domain="[('overall_status', '=', 'critical')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_status" context="{'group_by': 'overall_status'}"/>
+                    <filter string="Hostname" name="group_hostname" context="{'group_by': 'hostname'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_devops_monitor_dashboard" model="ir.actions.server">
+        <field name="name">Open Server Dashboard</field>
+        <field name="model_id" ref="model_devops_monitor_snapshot"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_open_dashboard()</field>
+    </record>
+
+    <record id="action_devops_monitor_history" model="ir.actions.act_window">
+        <field name="name">Monitor History</field>
+        <field name="res_model">devops.monitor.snapshot</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_devops_monitor_snapshot_search"/>
+        <field name="context">{}</field>
+    </record>
+
+</odoo>

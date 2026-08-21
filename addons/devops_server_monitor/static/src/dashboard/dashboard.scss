@@ -1,0 +1,119 @@
+.o_devops_dashboard {
+    padding: 16px 20px 24px;
+    background: linear-gradient(180deg, #f8f9fb 0%, #ffffff 220px);
+    min-height: 100%;
+    position: relative;
+}
+
+.devops-dashboard-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 420px;
+    padding: 48px 16px;
+}
+
+.devops-dashboard-loader-card {
+    text-align: center;
+    padding: 32px 40px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.devops-legend-cpu { color: #0d6efd; }
+.devops-legend-memory { color: #6610f2; }
+.devops-legend-disk { color: #fd7e14; }
+.devops-legend-disk-read { color: #6f42c1; }
+.devops-legend-disk-write { color: #d63384; }
+
+.o_devops_dashboard_header h2 {
+    font-weight: 700;
+}
+
+.devops-kpi-card {
+    border: 0;
+    border-top: 4px solid #0d6efd;
+}
+
+.devops-kpi-io-rx {
+    border-top-color: #20c997;
+}
+
+.devops-kpi-io-tx {
+    border-top-color: #0dcaf0;
+}
+
+.devops-kpi-io-read {
+    border-top-color: #6f42c1;
+}
+
+.devops-kpi-io-write {
+    border-top-color: #d63384;
+}
+
+.devops-kpi-card .display-6 {
+    font-size: 2rem;
+    line-height: 1.1;
+}
+
+.devops-sparkline {
+    width: 100%;
+    height: 72px;
+    display: block;
+    background: rgba(13, 110, 253, 0.05);
+    border-radius: 6px;
+}
+
+.devops-chart-sm {
+    width: 52px;
+    height: 52px;
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.devops-chart-inline {
+    margin-top: 2px;
+}
+
+.devops-chart-pie {
+    width: 160px;
+    height: 88px;
+    background: transparent;
+}
+
+.devops-chart-bar {
+    background: rgba(253, 126, 20, 0.06);
+}
+
+.devops-chart-area {
+    background: rgba(102, 16, 242, 0.06);
+}
+
+.devops-chart-dual {
+    background: rgba(111, 66, 193, 0.06);
+}
+
+.devops-status-ok {
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+    color: #0f5132;
+}
+
+.devops-status-warning {
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+    color: #664d03;
+}
+
+.devops-status-critical {
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+    color: #842029;
+}
+
+.devops-status-unknown {
+    background-color: #e2e3e5;
+    border-color: #d3d6d8;
+    color: #41464b;
+}

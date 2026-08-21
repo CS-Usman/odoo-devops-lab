@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="group_devops_monitor_user" model="res.groups">
+        <field name="name">DevOps Monitor User</field>
+        <field name="category_id" ref="base.module_category_administration_administration"/>
+    </record>
+
+    <record id="group_devops_monitor_admin" model="res.groups">
+        <field name="name">DevOps Monitor Admin</field>
+        <field name="category_id" ref="base.module_category_administration_administration"/>
+        <field name="implied_ids" eval="[(4, ref('group_devops_monitor_user'))]"/>
+        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+</odoo>

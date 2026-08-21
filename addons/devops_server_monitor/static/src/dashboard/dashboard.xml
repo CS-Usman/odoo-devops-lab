@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="devops_server_monitor.MiniChart">
+        <svg t-att-class="chartSvgClass"
+             t-att-viewBox="viewBox"
+             preserveAspectRatio="xMidYMid meet">
+            <t t-if="props.type === 'line'">
+                <path t-att-d="linePath" fill="none" t-att-stroke="props.color" stroke-width="2"/>
+            </t>
+            <t t-elif="props.type === 'dotted'">
+                <path t-att-d="linePath" fill="none" t-att-stroke="props.color"
+                      stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
+            </t>
+            <t t-elif="props.type === 'area'">
+                <path t-att-d="areaPath" t-att-fill="props.fillColor or props.color" fill-opacity="0.22"/>
+                <path t-att-d="linePath" fill="none" t-att-stroke="props.color" stroke-width="2"/>
+            </t>
+            <t t-elif="props.type === 'bar'">
+                <t t-foreach="bars" t-as="bar" t-key="bar_index">
+                    <rect t-att-x="bar.x" t-att-y="bar.y"
+                          t-att-width="bar.width" t-att-height="bar.height"
+                          t-att-fill="props.color" rx="2" opacity="0.88"/>
+                </t>
+            </t>
+            <t t-elif="props.type === 'donut'">
+                <t t-foreach="donutSegments" t-as="seg" t-key="seg_index">
+                    <path t-att-d="seg.d" t-att-fill="seg.color"/>
+                </t>
+            </t>
+            <t t-elif="props.type === 'dual'">
+                <t t-foreach="dualLines" t-as="ln" t-key="ln_index">
+                    <t t-if="ln.dotted">
+                        <path t-att-d="ln.d" fill="none" t-att-stroke="ln.color"
+                              stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
+                    </t>
+                    <t t-else="">
+                        <path t-att-d="ln.d" fill="none" t-att-stroke="ln.color" stroke-width="2"/>
+                    </t>
+                </t>
+            </t>
+        </svg>
+    </t>
+
+    <t t-name="devops_server_monitor.Dashboard">
+        <div class="o_devops_dashboard o_action o_view_controller">
+            <div class="o_devops_dashboard_header d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fa fa-heartbeat me-2 text-primary"/>
+                        Server Health Dashboard
+                    </h2>
+                    <div class="text-muted" t-if="state.data">
+                        <i class="fa fa-server me-1"/>
+                        <t t-esc="state.data.hostname"/>
+                        <span class="mx-2">|</span>
+                        <i class="fa fa-clock-o me-1"/>
+                        <t t-esc="state.data.collected_at"/>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary"
+                            t-on-click="onRefreshMetrics"
+                            t-att-disabled="state.refreshing">
+                        <i class="fa fa-refresh" t-att-class="state.refreshing ? 'fa-spin' : ''"/>
+                        Refresh Metrics
+                    </button>
+                    <button class="btn btn-secondary" t-on-click="openHistory">
+                        <i class="fa fa-history"/>
+                        History
+                    </button>
+                </div>
+            </div>
+
+            <div t-if="state.loading" class="devops-dashboard-loader">
+                <div class="devops-dashboard-loader-card">
+                    <i class="fa fa-circle-o-notch fa-spin fa-3x text-primary mb-3"/>
+                    <div class="fw-semibold">Loading dashboard</div>
+                    <div class="text-muted small">Collecting metrics and chart history...</div>
+                </div>
+            </div>
+
+            <t t-else="">
+                <div class="alert mb-3" t-att-class="statusClass">
+                    <strong>
+                        <i class="fa fa-info-circle me-1"/>
+                        Overall status:
+                    </strong>
+                    <span class="text-uppercase fw-bold ms-1" t-esc="state.data.overall_status"/>
+                    <div class="small mt-1">
+                        Refresh Metrics runs a live check (CPU, RAM, disk, DB, filestore, Docker) and stores a snapshot. Cron also collects every 5 minutes.
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card devops-kpi-card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="text-muted small">
+                                            <i class="fa fa-microchip me-1"/>CPU
+                                            <span class="badge bg-light text-dark ms-1">line</span>
+                                        </div>
+                                        <div class="display-6 fw-bold" t-esc="formatPercent(state.data.host.cpu_percent)"/>
+                                        <div class="small text-muted">
+                                            <t t-esc="state.data.host.cpu_count"/> cores · Load <t t-esc="state.data.host.load_1"/>
+                                        </div>
+                                    </div>
+                                    <DevopsMiniChart type="'donut'" size="'sm'"
+                                                     segments="cpuDonutSegments"
+                                                     extraClass="'devops-chart-inline'"/>
+                                </div>
+                                <DevopsMiniChart type="'line'" color="chartColors.cpu"
+                                                 values="state.charts.cpu"
+                                                 extraClass="'mt-2'"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card devops-kpi-card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="text-muted small">
+                                            <i class="fa fa-area-chart me-1"/>Memory
+                                            <span class="badge bg-light text-dark ms-1">area</span>
+                                        </div>
+                                        <div class="display-6 fw-bold" t-esc="formatPercent(state.data.host.memory_percent)"/>
+                                        <div class="small text-muted">
+                                            <t t-esc="state.data.host.memory_used_gb"/> /
+                                            <t t-esc="state.data.host.memory_total_gb"/> GB
+                                        </div>
+                                    </div>
+                                    <DevopsMiniChart type="'donut'" size="'sm'"
+                                                     segments="memoryDonutSegments"
+                                                     extraClass="'devops-chart-inline'"/>
+                                </div>
+                                <DevopsMiniChart type="'area'" color="chartColors.memory" fillColor="chartColors.memory"
+                                                 values="state.charts.memory"
+                                                 extraClass="'mt-2 devops-chart-area'"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card devops-kpi-card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="text-muted small">
+                                            <i class="fa fa-hdd-o me-1"/>Disk
+                                            <span class="badge bg-light text-dark ms-1">bar</span>
+                                        </div>
+                                        <div class="display-6 fw-bold" t-esc="formatPercent(state.data.host.disk_percent)"/>
+                                        <div class="small text-muted">
+                                            <t t-esc="state.data.host.disk_used_gb"/> /
+                                            <t t-esc="state.data.host.disk_total_gb"/> GB
+                                        </div>
+                                    </div>
+                                    <DevopsMiniChart type="'donut'" size="'sm'"
+                                                     segments="diskDonutSegments"
+                                                     extraClass="'devops-chart-inline'"/>
+                                </div>
+                                <DevopsMiniChart type="'bar'" color="chartColors.disk"
+                                                 values="state.charts.disk"
+                                                 extraClass="'mt-2 devops-chart-bar'"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card devops-kpi-card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="text-muted small">
+                                    <i class="fa fa-database me-1"/>Database
+                                    <span class="badge bg-light text-dark ms-1">dotted</span>
+                                </div>
+                                <div class="display-6 fw-bold"><t t-esc="state.data.database.latency_ms"/> ms</div>
+                                <div class="small text-muted">
+                                    <t t-esc="state.data.database.name"/> |
+                                    <t t-esc="state.data.database.connections"/> conn |
+                                    <t t-esc="state.data.database.size_mb"/> MB
+                                </div>
+                                <DevopsMiniChart type="'dotted'" color="chartColors.db"
+                                                 values="state.charts.db_latency"
+                                                 extraClass="'mt-2'"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-lg-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header fw-bold">
+                                <i class="fa fa-pie-chart me-2"/>Resource Mix
+                                <span class="badge bg-light text-dark ms-1">pie</span>
+                            </div>
+                            <div class="card-body d-flex flex-column align-items-center">
+                                <DevopsMiniChart type="'donut'"
+                                                 segments="resourceMixSegments"
+                                                 extraClass="'devops-chart-pie'"/>
+                                <div class="devops-chart-legend mt-2 w-100">
+                                    <div class="d-flex justify-content-around small">
+                                        <span><i class="fa fa-square devops-legend-cpu"/> CPU</span>
+                                        <span><i class="fa fa-square devops-legend-memory"/> Memory</span>
+                                        <span><i class="fa fa-square devops-legend-disk"/> Disk</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-8">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <h5 class="text-muted mb-0">
+                                    <i class="fa fa-exchange me-2"/>Network &amp; Disk I/O
+                                </h5>
+                                <div class="small text-muted">
+                                    Totals since boot; charts show MB per snapshot interval (bar / area / dotted).
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <div class="card devops-kpi-card devops-kpi-io-rx h-100 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="text-muted small">
+                                            <i class="fa fa-download me-1"/>Network RX
+                                            <span class="badge bg-light text-dark ms-1">bar</span>
+                                        </div>
+                                        <div class="display-6 fw-bold" t-esc="formatMb(state.data.host.network_rx_mb)"/>
+                                        <DevopsMiniChart type="'bar'" color="chartColors.networkRx"
+                                                         values="state.charts.network_rx"
+                                                         extraClass="'mt-2 devops-chart-bar'"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <div class="card devops-kpi-card devops-kpi-io-tx h-100 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="text-muted small">
+                                            <i class="fa fa-upload me-1"/>Network TX
+                                            <span class="badge bg-light text-dark ms-1">dotted</span>
+                                        </div>
+                                        <div class="display-6 fw-bold" t-esc="formatMb(state.data.host.network_tx_mb)"/>
+                                        <DevopsMiniChart type="'dotted'" color="chartColors.networkTx"
+                                                         values="state.charts.network_tx"
+                                                         extraClass="'mt-2'"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl-6">
+                                <div class="card devops-kpi-card devops-kpi-io-read h-100 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="text-muted small">
+                                            <i class="fa fa-arrows-v me-1"/>Disk I/O
+                                            <span class="badge bg-light text-dark ms-1">dual line</span>
+                                        </div>
+                                        <div class="row small mb-2">
+                                            <div class="col-6">
+                                                <span class="text-muted">Read total</span>
+                                                <div class="fw-bold" t-esc="formatMb(state.data.host.disk_read_mb)"/>
+                                            </div>
+                                            <div class="col-6">
+                                                <span class="text-muted">Write total</span>
+                                                <div class="fw-bold" t-esc="formatMb(state.data.host.disk_write_mb)"/>
+                                            </div>
+                                        </div>
+                                        <DevopsMiniChart type="'dual'"
+                                                         series="diskIoSeries"
+                                                         extraClass="'mt-1 devops-chart-dual'"/>
+                                        <div class="devops-chart-legend small mt-2">
+                                            <span class="me-3">
+                                                <i class="fa fa-minus devops-legend-disk-read"/> Read
+                                            </span>
+                                            <span>
+                                                <i class="fa fa-minus devops-legend-disk-write"/> Write (dotted)
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-lg-6">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header fw-bold">
+                                <i class="fa fa-folder-open me-2"/>Filestore
+                                <span class="badge bg-light text-dark ms-1">donut</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-5 d-flex justify-content-center">
+                                        <DevopsMiniChart type="'donut'"
+                                                         segments="filestoreDonutSegments"
+                                                         extraClass="'devops-chart-pie'"/>
+                                    </div>
+                                    <div class="col-md-7">
+                                        <div class="small text-muted mb-2" t-esc="state.data.filestore.path"/>
+                                        <div class="row text-center g-2">
+                                            <div class="col-4"><strong t-esc="state.data.filestore.used_gb"/> GB used</div>
+                                            <div class="col-4"><strong t-esc="state.data.filestore.free_gb"/> GB free</div>
+                                            <div class="col-4"><strong t-esc="state.data.filestore.file_count"/> files</div>
+                                        </div>
+                                        <div class="small text-muted mt-2">
+                                            Usage: <strong t-esc="formatPercent(state.data.filestore.percent)"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-6">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header fw-bold">
+                                <i class="fa fa-cube me-2"/>Docker Containers
+                                <span class="badge bg-secondary ms-2" t-esc="state.data.docker.container_count"/>
+                            </div>
+                            <div class="card-body p-0">
+                                <t t-if="!state.data.docker.available">
+                                    <div class="p-3 text-muted">
+                                        Docker CLI not available from this Odoo container (mount <code>/var/run/docker.sock</code> to enable).
+                                    </div>
+                                </t>
+                                <t t-elif="!state.data.docker.containers.length">
+                                    <div class="p-3 text-muted">No running containers reported.</div>
+                                </t>
+                                <table t-else="" class="table table-sm table-striped mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>CPU %</th>
+                                            <th>Mem %</th>
+                                            <th>Mem Used</th>
+                                            <th>Network I/O</th>
+                                            <th>Block I/O</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="state.data.docker.containers" t-as="container" t-key="container.name">
+                                            <td><i class="fa fa-cube me-1 text-muted"/><t t-esc="container.name"/></td>
+                                            <td><t t-esc="container.cpu_percent"/></td>
+                                            <td><t t-esc="container.memory_percent"/></td>
+                                            <td><t t-esc="container.memory_used_mb"/> MB</td>
+                                            <td><t t-esc="container.network_io"/></td>
+                                            <td><t t-esc="container.block_io"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-muted small mt-3">
+                    <i class="fa fa-database me-1"/>
+                    Snapshots stored: <strong t-esc="state.charts.snapshot_count"/>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>
