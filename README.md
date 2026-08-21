@@ -1,22 +1,34 @@
 # odoo-devops-lab
 
-A personal DevOps lab built around a custom Odoo module (`devops_demo`). The goal is to practice production-style delivery on Azure: build and ship Odoo as a Docker image, provision infra with Terraform, deploy with GitHub Actions, then evolve to k3s, secrets (Vault), observability (Prometheus/Grafana/Loki), and GitOps (Argo CD).
+Personal lab for learning DevOps with Odoo 17 — containerize the app, put it on Azure, automate builds and deploys, then add k8s, secrets, and monitoring over time.
 
-- **App:** Odoo 17 + custom module
-- **Database:** Azure Database for PostgreSQL (managed)
-- **Runtime:** Docker → k3s on a single Azure VM
-- **Access:** HTTP via VM public IP (no domain/SSL in this lab)
+## Documentation
 
-## Addons
+Setup and notes for each tool live under **`docs/`**. Start here:
 
-| Module | Purpose |
-|--------|---------|
-| `devops_server_monitor` | Server health dashboard (CPU, RAM, disk, I/O, DB, filestore, Docker) + `/devops/health` and `/devops/metrics` endpoints |
+**[docs/README.md](docs/README.md)**
 
-### Install monitor module
+Tool-specific guides (added as we go):
 
-Add `addons/devops_server_monitor` to your Odoo addons path, update apps list, install **DevOps Server Monitor**.
+| Topic | README |
+|-------|--------|
+| Docker & Compose | [docs/docker/README.md](docs/docker/README.md) |
 
-- Menu: **DevOps Monitor → Dashboard**
-- Cron: collects metrics every 5 minutes
-- CI: `curl http://<host>/devops/health` and `curl http://<host>/devops/metrics`
+## Repo layout
+
+```
+├── addons/              # Odoo custom modules
+├── Dockerfile
+├── docker-compose.yml
+└── docs/                # Per-tool documentation
+```
+
+## Roadmap (high level)
+
+1. Local Docker
+2. GitHub + Terraform (Azure)
+3. CI/CD
+4. VM deploy
+5. k8s, secrets, observability
+
+For steps, commands, and what we did at each stage — see the README in `docs/` for that tool.
