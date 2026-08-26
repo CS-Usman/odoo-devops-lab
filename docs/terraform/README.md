@@ -52,7 +52,7 @@ cd ~/odoo-devops-lab
 git pull
 
 cp .env.azure.example .env
-# edit .env — HOST from terraform output, same USER/PASSWORD as tfvars
+# edit .env — DB_HOST from terraform output, DB_USER/DB_PASSWORD from tfvars
 
 sudo docker compose down
 sudo docker compose -f docker-compose.azure.yml up -d --build

@@ -10,10 +10,10 @@ services:
     ports:
       - "8069:8069"
     environment:
-      HOST: ${HOST}
-      USER: ${USER}
-      PASSWORD: ${PASSWORD}
-      PORT: ${PORT:-5432}
+      HOST: ${DB_HOST}
+      USER: ${DB_USER}
+      PASSWORD: ${DB_PASSWORD}
+      PORT: ${DB_PORT:-5432}
     volumes:
       - odoo-data:/var/lib/odoo
     restart: unless-stopped
