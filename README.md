@@ -13,6 +13,7 @@ Tool-specific guides (added as we go):
 | Topic | README |
 |-------|--------|
 | Docker & Compose | [docs/docker/README.md](docs/docker/README.md) |
+| Terraform (Azure VM) | [docs/terraform/README.md](docs/terraform/README.md) |
 
 ## Repo layout
 

@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.azure.example
 *.pem
 *.key
 id_rsa

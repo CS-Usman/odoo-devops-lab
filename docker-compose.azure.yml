@@ -1,0 +1,22 @@
+# Azure VM: Odoo only — PostgreSQL is Azure Flexible Server (private VNet).
+# Usage on VM:
+#   cp .env.azure.example .env
+#   # fill HOST / USER / PASSWORD from: terraform output
+#   docker compose -f docker-compose.azure.yml up -d --build
+
+services:
+  odoo:
+    build: .
+    ports:
+      - "8069:8069"
+    environment:
+      HOST: ${HOST}
+      USER: ${USER}
+      PASSWORD: ${PASSWORD}
+      PORT: ${PORT:-5432}
+    volumes:
+      - odoo-data:/var/lib/odoo
+    restart: unless-stopped
+
+volumes:
+  odoo-data:

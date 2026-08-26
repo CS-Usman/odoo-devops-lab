@@ -1,0 +1,25 @@
+output "resource_group_name" {
+  value = azurerm_resource_group.lab.name
+}
+
+output "public_ip" {
+  description = "SSH and Odoo URL: http://<this-ip>:8069"
+  value       = azurerm_public_ip.lab.ip_address
+}
+
+output "ssh_command" {
+  value = "ssh ${var.admin_username}@${azurerm_public_ip.lab.ip_address}"
+}
+
+output "postgres_fqdn" {
+  description = "Private FQDN — reachable from the VM inside the VNet"
+  value       = azurerm_postgresql_flexible_server.lab.fqdn
+}
+
+output "postgres_database_name" {
+  value = azurerm_postgresql_flexible_server_database.odoo.name
+}
+
+output "postgres_admin_login" {
+  value = var.postgres_admin_login
+}
