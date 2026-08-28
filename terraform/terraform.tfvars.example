@@ -21,3 +21,6 @@ postgres_admin_login      = "odooadmin"
 postgres_admin_password   = "admin"
 postgres_database_name    = "odoo_devops_lab"
 postgres_sku_name         = "B_Standard_B1ms"
+
+# Step 4 — Azure Blob backups (globally unique name)
+storage_account_name = "stodoodevopslab"

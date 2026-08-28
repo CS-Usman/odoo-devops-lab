@@ -95,3 +95,21 @@ variable "postgres_storage_mb" {
   type        = number
   default     = 32768
 }
+
+variable "storage_account_name" {
+  description = "Globally unique storage account name (3-24 lowercase letters/numbers)"
+  type        = string
+  default     = "stodoodevopslab"
+}
+
+variable "storage_container_name" {
+  description = "Private blob container for pg_dump + filestore archives"
+  type        = string
+  default     = "odoo-backups"
+}
+
+variable "backup_retention_days" {
+  description = "Auto-delete backup blobs older than this many days"
+  type        = number
+  default     = 30
+}

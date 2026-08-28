@@ -23,3 +23,22 @@ output "postgres_database_name" {
 output "postgres_admin_login" {
   value = var.postgres_admin_login
 }
+
+output "storage_account_name" {
+  description = "Azure Blob storage account for backups"
+  value       = azurerm_storage_account.backups.name
+}
+
+output "storage_container_name" {
+  value = azurerm_storage_container.backups.name
+}
+
+output "storage_blob_endpoint" {
+  value = azurerm_storage_account.backups.primary_blob_endpoint
+}
+
+output "storage_primary_access_key" {
+  description = "Copy to VM .env as AZURE_STORAGE_KEY — do not commit"
+  value       = azurerm_storage_account.backups.primary_access_key
+  sensitive   = true
+}
