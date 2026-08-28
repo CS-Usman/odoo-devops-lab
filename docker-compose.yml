@@ -23,8 +23,11 @@ services:
       HOST: db
       USER: odoo
       PASSWORD: odoo
+    group_add:
+      - "${DOCKER_GID:-999}"
     volumes:
       - odoo-data:/var/lib/odoo
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
 
 volumes:
