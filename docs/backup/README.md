@@ -6,7 +6,7 @@ Off-VM backups so VM loss does not lose Odoo data.
 
 | Artifact | Source |
 |----------|--------|
-| `db.dump` | `pg_dump` of `odoo_devops_lab` (Azure Postgres) |
+| `db.dump` | `pg_dump` (via `postgres:16` Docker client) of `odoo_devops_lab` |
 | `filestore.tar.gz` | `/var/lib/odoo/filestore/odoo_devops_lab` on Docker volume |
 
 Blob layout:
@@ -72,8 +72,11 @@ az version
 
 ## Step 4 — Run backup manually
 
+Scripts use the **`postgres:16` Docker image** for `pg_dump` / `pg_restore` so the client matches Azure Postgres 16 (Ubuntu’s default `postgresql-client` is 14).
+
 ```bash
 cd ~/odoo-devops-lab
+git pull origin main   # get latest scripts
 chmod +x scripts/backup.sh scripts/restore.sh
 ./scripts/backup.sh
 ```

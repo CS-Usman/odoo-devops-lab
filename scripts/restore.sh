@@ -62,11 +62,14 @@ az storage blob download \
 echo "[restore] Stop Odoo..."
 sudo docker compose -f "${COMPOSE_FILE}" stop odoo
 
-echo "[restore] PostgreSQL restore..."
-export PGPASSWORD="$DB_PASSWORD"
-pg_restore -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" \
+echo "[restore] PostgreSQL restore (postgres:16 client)..."
+sudo docker run --rm \
+  -e PGPASSWORD="$DB_PASSWORD" \
+  -v "${WORKDIR}:/backup:ro" \
+  postgres:16 \
+  pg_restore -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" \
   -d "${ODOO_DB_NAME}" --clean --if-exists --no-owner --role="${DB_USER}" \
-  "${WORKDIR}/db.dump"
+  "/backup/db.dump"
 
 VOLUME_PATH="$(sudo docker volume inspect "${VOLUME_NAME}" --format '{{ .Mountpoint }}')"
 FILESTORE_DIR="${VOLUME_PATH}/filestore"

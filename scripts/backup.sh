@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Upload PostgreSQL dump + Odoo filestore to Azure Blob.
-# Requires: .env with DB_* and AZURE_STORAGE_* vars, az CLI, postgresql-client, docker.
+# Requires: .env with DB_* and AZURE_STORAGE_* vars, az CLI, docker (postgres:16 client).
 
 set -euo pipefail
 
@@ -29,10 +29,12 @@ STAMP="$(date +%Y-%m-%d)"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
-echo "[backup] PostgreSQL dump of ${ODOO_DB_NAME}..."
-export PGPASSWORD="$DB_PASSWORD"
-pg_dump -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" -Fc \
-  -f "${WORKDIR}/db.dump" "${ODOO_DB_NAME}"
+echo "[backup] PostgreSQL dump of ${ODOO_DB_NAME} (postgres:16 client)..."
+sudo docker run --rm \
+  -e PGPASSWORD="$DB_PASSWORD" \
+  postgres:16 \
+  pg_dump -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" -Fc \
+  "$ODOO_DB_NAME" > "${WORKDIR}/db.dump"
 
 echo "[backup] Filestore archive..."
 VOLUME_NAME="odoo-devops-lab_odoo-data"
