@@ -40,6 +40,7 @@ resource "azurerm_postgresql_flexible_server" "lab" {
   administrator_password        = var.postgres_admin_password
   sku_name                      = var.postgres_sku_name
   storage_mb                    = var.postgres_storage_mb
+  zone                          = "2"
   backup_retention_days         = 7
   geo_redundant_backup_enabled  = false
   public_network_access_enabled = false

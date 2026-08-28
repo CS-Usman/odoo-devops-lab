@@ -49,33 +49,21 @@ resource "azurerm_network_security_rule" "ssh" {
   network_security_group_name = azurerm_network_security_group.lab.name
 }
 
-resource "azurerm_network_security_rule" "odoo" {
-  name                        = "allow-odoo"
-  priority                    = 110
+resource "azurerm_network_security_rule" "http" {
+  name                        = "allow-http"
+  priority                    = 105
   direction                   = "Inbound"
   access                      = "Allow"
   protocol                    = "Tcp"
   source_port_range           = "*"
-  destination_port_range      = "8069"
+  destination_port_range      = "80"
   source_address_prefix       = "*"
   destination_address_prefix  = "*"
   resource_group_name         = azurerm_resource_group.lab.name
   network_security_group_name = azurerm_network_security_group.lab.name
 }
 
-resource "azurerm_network_security_rule" "odoo_longpolling" {
-  name                        = "allow-odoo-longpolling"
-  priority                    = 120
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Tcp"
-  source_port_range           = "*"
-  destination_port_range      = "8072"
-  source_address_prefix       = "*"
-  destination_address_prefix  = "*"
-  resource_group_name         = azurerm_resource_group.lab.name
-  network_security_group_name = azurerm_network_security_group.lab.name
-}
+# Odoo ports 8069/8072 are not public — Nginx on :80 proxies to localhost only.
 
 resource "azurerm_network_interface" "lab" {
   name                = "${var.vm_name}-nic"
