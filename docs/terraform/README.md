@@ -1,112 +1,102 @@
 # Terraform — Azure infra
 
-## Step 1 — VM (done)
+Three layers: **VM**, **PostgreSQL**, **Blob storage** for backups.
 
-Linux VM + network + NSG for SSH and Odoo.
+## Overview
 
-## Step 2 — Azure PostgreSQL (private)
+| Resource | Purpose |
+|----------|---------|
+| Linux VM + VNet + NSG | Runs Odoo (Docker), Nginx on :80 |
+| PostgreSQL Flexible Server v16 | Managed DB — private, VM-only access |
+| Storage account + container | Off-VM backups (db dump + filestore) |
 
-Managed PostgreSQL Flexible Server in the **same VNet** as the VM. No public internet access — only the VM can reach the database.
+Local dev still uses `docker-compose.yml` (Postgres in Docker). Production VM uses `docker-compose.azure.yml` + Azure Postgres.
 
-### What `postgres.tf` adds
+---
 
-1. Subnet `10.0.2.0/24` (delegated for PostgreSQL)
-2. Private DNS zone `postgres.database.azure.com`
-3. PostgreSQL Flexible Server (v16, burstable B1ms)
-4. Database `odoo_devops_lab`
+## Step 1 — VM
 
-### One-time: register provider
-
-```bash
-az provider register --namespace Microsoft.DBforPostgreSQL
-az provider show --namespace Microsoft.DBforPostgreSQL --query registrationState
-```
-
-Wait until `Registered`.
-
-### Apply from your laptop
-
-Add to `terraform.tfvars` (copy from `terraform.tfvars.example`):
-
-```hcl
-postgres_admin_password = "admin"
-```
-
-If the server name is taken globally, change `postgres_server_name` too.
+Linux VM, network, NSG (SSH, HTTP :80). Odoo ports 8069/8072 are not public — Nginx proxies on :80.
 
 ```bash
 cd terraform
-terraform plan
 terraform apply
+terraform output public_ip_address
+```
 
+---
+
+## Step 2 — Azure PostgreSQL (private)
+
+Managed PostgreSQL in the **same VNet** as the VM. No public internet access.
+
+**Adds:** delegated subnet, private DNS zone, Flexible Server v16, database `odoo_devops_lab`.
+
+```bash
+az provider register --namespace Microsoft.DBforPostgreSQL
+```
+
+Add to `terraform.tfvars`:
+
+```hcl
+postgres_admin_password = "your-password"
+```
+
+```bash
+terraform apply
 terraform output postgres_fqdn
 terraform output postgres_database_name
 ```
 
-### Point Odoo at Azure Postgres (on the VM)
-
-**Option A — fresh database (simplest)**
+**Point Odoo at Azure Postgres (VM):**
 
 ```bash
-cd ~/odoo-devops-lab
-git pull
-
 cp .env.azure.example .env
-# edit .env — DB_HOST from terraform output, DB_USER/DB_PASSWORD from tfvars
+# DB_HOST = postgres_fqdn, DB_USER/DB_PASSWORD from tfvars
 
-sudo docker compose down
-sudo docker compose -f docker-compose.azure.yml up -d --build
+sudo docker compose -f docker-compose.azure.yml up -d
 ```
 
-Open `http://<VM_IP>:8069`, create DB `odoo_devops_lab`, install modules.
+Open `http://<VM_IP>/`, create or use database `odoo_devops_lab`.
 
-**Option B — migrate existing Docker Postgres data**
-
-On the VM, while the old stack is still running:
+**Test from VM:**
 
 ```bash
-sudo docker compose exec db pg_dump -U odoo -Fc postgres > /tmp/odoo.dump
+sudo docker run --rm -e PGPASSWORD="$DB_PASSWORD" postgres:16 \
+  psql -h "$DB_HOST" -U odooadmin -d odoo_devops_lab -c 'SELECT 1'
 ```
 
-After Azure Postgres exists and `.env` is set:
+---
+
+## Step 3 — Azure Blob (backups)
+
+Storage account + private container `odoo-backups`. Lifecycle deletes blobs after **30 days**.
 
 ```bash
-# install client if needed
-sudo apt-get update && sudo apt-get install -y postgresql-client
+az provider register --namespace Microsoft.Storage
+terraform apply
 
-# restore (use FQDN + password from terraform)
-pg_restore -h psql-odoo-devops-lab.postgres.database.azure.com \
-  -U odooadmin -d odoo_devops_lab --no-owner --role=odooadmin /tmp/odoo.dump
+terraform output storage_account_name
+terraform output storage_container_name
+terraform output -raw storage_primary_access_key
 ```
 
-Then switch compose file and restart Odoo:
+Put storage values in VM `.env` — see [backup docs](../backup/README.md).
 
-```bash
-sudo docker compose down
-sudo docker compose -f docker-compose.azure.yml up -d --build
-```
-
-### Test DB connectivity from VM
-
-```bash
-sudo apt-get install -y postgresql-client
-psql "host=$(cd terraform && terraform output -raw postgres_fqdn) user=odooadmin dbname=odoo_devops_lab sslmode=prefer"
-```
-
-### Local dev unchanged
-
-Keep using `docker-compose.yml` on your laptop (Postgres in Docker). Azure uses `docker-compose.azure.yml`.
+---
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `versions.tf` | Terraform + Azure provider |
-| `variables.tf` | Inputs (VM + Postgres) |
-| `main.tf` | Resource group, network, NSG, VM |
+| `main.tf` | VM, network, NSG |
 | `postgres.tf` | Private PostgreSQL Flexible Server |
-| `outputs.tf` | Public IP, Postgres FQDN |
+| `storage.tf` | Blob account, container, lifecycle |
+| `variables.tf` | Inputs |
+| `outputs.tf` | IP, Postgres FQDN, storage keys |
 | `terraform.tfvars.example` | Copy to `terraform.tfvars` (not committed) |
+
+---
 
 ## Tear down
 
@@ -114,4 +104,4 @@ Keep using `docker-compose.yml` on your laptop (Postgres in Docker). Azure uses 
 terraform destroy
 ```
 
-Postgres deletion can take several minutes.
+Postgres and storage deletion can take several minutes.

@@ -1,5 +1,5 @@
 # Azure VM: Odoo only — PostgreSQL is Azure Flexible Server (private VNet).
-# HTTP via Nginx on :80 — Odoo binds localhost only (see deploy/nginx/odoo.conf).
+# HTTP via Nginx on :80 — Odoo binds localhost only (see docs/nginx/README.md).
 # Usage on VM:
 #   cp .env.azure.example .env
 #   docker compose -f docker-compose.azure.yml pull

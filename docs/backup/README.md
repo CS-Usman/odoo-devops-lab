@@ -1,44 +1,40 @@
-# Backups — PostgreSQL + filestore → Azure Blob
+# Backups — Azure Postgres + filestore → Blob
 
-Off-VM backups so VM loss does not lose Odoo data.
+Off-VM backups so losing the VM does not lose Odoo data.
 
-## What gets backed up
+## Overview
 
-| Artifact | Source |
-|----------|--------|
-| `db.dump` | `pg_dump` (via `postgres:16` Docker client) of `odoo_devops_lab` |
-| `filestore.tar.gz` | `/var/lib/odoo/filestore/odoo_devops_lab` on Docker volume |
+| What | Where it lives | Backup artifact |
+|------|----------------|-----------------|
+| **Database** | Azure PostgreSQL Flexible Server (`odoo_devops_lab`) | `db.dump` via `pg_dump` |
+| **Attachments** | Docker volume on VM (`/var/lib/odoo/filestore/odoo_devops_lab`) | `filestore.tar.gz` |
+
+Both upload to **Azure Blob** (Terraform-managed storage account). Azure Postgres also has 7-day managed backups (DB only — no filestore).
 
 Blob layout:
 
 ```text
 odoo-backups/
-  2026-08-28/
+  YYYY-MM-DD/
     db.dump
     filestore.tar.gz
 ```
 
-Old blobs auto-delete after **30 days** (Terraform lifecycle policy).
+Blobs older than **30 days** are deleted automatically (Terraform lifecycle policy).
+
+Scripts: `scripts/backup.sh`, `scripts/restore.sh`.
 
 ---
 
 ## Step 1 — Terraform (laptop)
 
-Register provider once:
-
 ```bash
 az provider register --namespace Microsoft.Storage
-```
-
-Apply storage resources:
-
-```bash
 cd terraform
-terraform plan
 terraform apply
 ```
 
-Get secrets for VM `.env`:
+Get values for VM `.env`:
 
 ```bash
 terraform output storage_account_name
@@ -46,74 +42,73 @@ terraform output storage_container_name
 terraform output -raw storage_primary_access_key
 ```
 
-If storage account name is taken, set `storage_account_name` in `terraform.tfvars` and apply again.
+See [terraform docs](../terraform/README.md#step-3--azure-blob-backups) for storage details.
 
 ---
 
-## Step 2 — VM `.env` (add blob vars)
+## Step 2 — VM `.env`
+
+Add to `~/odoo-devops-lab/.env`:
 
 ```env
 AZURE_STORAGE_ACCOUNT=stodoodevopslab
 AZURE_STORAGE_CONTAINER=odoo-backups
-AZURE_STORAGE_KEY=<from terraform output -raw storage_primary_access_key>
+AZURE_STORAGE_KEY=<from terraform output>
 ODOO_DB_NAME=odoo_devops_lab
 ```
 
 ---
 
-## Step 3 — Install Azure CLI on VM (once)
+## Step 3 — Azure CLI on VM (once)
 
 ```bash
 curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-az version
 ```
 
 ---
 
-## Step 4 — Run backup manually
+## Step 4 — Run backup
 
-Scripts use the **`postgres:16` Docker image** for `pg_dump` / `pg_restore` so the client matches Azure Postgres 16 (Ubuntu’s default `postgresql-client` is 14).
+Uses **`postgres:16` Docker client** for dump/restore (matches Azure Postgres 16). Filestore is archived **inside the Odoo container** (avoids host volume permission issues).
 
 ```bash
 cd ~/odoo-devops-lab
-git pull origin main   # get latest scripts
 chmod +x scripts/backup.sh scripts/restore.sh
 ./scripts/backup.sh
 ```
 
-List blobs:
+Verify in Blob:
 
 ```bash
-export AZURE_STORAGE_KEY='...'
 az storage blob list \
-  --account-name stodoodevopslab \
+  --account-name "$AZURE_STORAGE_ACCOUNT" \
   --container-name odoo-backups \
   --output table
 ```
 
 ---
 
-## Step 5 — Weekly cron (VM)
+## Step 5 — Weekly cron
 
 ```bash
+sudo touch /var/log/odoo-backup.log
+sudo chown azureuser:azureuser /var/log/odoo-backup.log
+
 sudo tee /etc/cron.d/odoo-backup << 'EOF'
 SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 0 2 * * 0 azureuser /home/azureuser/odoo-devops-lab/scripts/backup.sh >> /var/log/odoo-backup.log 2>&1
 EOF
 ```
 
+Runs every **Sunday 02:00 UTC**. Check: `tail /var/log/odoo-backup.log`
+
 ---
 
-## Restore (careful)
+## Restore
 
 ```bash
-./scripts/restore.sh 2026-08-28
+./scripts/restore.sh YYYY-MM-DD
 ```
 
-Type `yes` when prompted. Stops Odoo, restores DB + filestore, starts Odoo.
-
----
-
-## Azure Postgres managed backup
-
-Terraform Postgres still has **7-day managed backups** (DB only). Blob backups add **filestore** and portable full copies for staging refresh.
+Stops Odoo, restores DB + filestore, starts Odoo. Type `yes` to confirm.

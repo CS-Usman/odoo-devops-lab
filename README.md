@@ -1,35 +1,56 @@
 # odoo-devops-lab
 
-Personal lab for learning DevOps with Odoo 17 — containerize the app, put it on Azure, automate builds and deploys, then add k8s, secrets, and monitoring over time.
+Personal lab for learning DevOps with Odoo 17 — Docker locally, Azure for production, automated deploys, backups.
+
+## What's built
+
+| Layer | Stack |
+|-------|--------|
+| App | Odoo 17 + `devops_server_monitor` module |
+| Local dev | Docker Compose — Postgres + Odoo |
+| Azure VM | Odoo container, Nginx on :80 |
+| Database | Azure PostgreSQL Flexible Server v16 (private) |
+| CI/CD | GitHub Actions → GHCR → SSH deploy to VM |
+| Backups | `pg_dump` + filestore → Azure Blob (weekly cron) |
+
+**Live URL:** `http://<VM_IP>/` (Nginx → Odoo on localhost)
 
 ## Documentation
 
-Setup and notes for each tool live under **`docs/`**. Start here:
+Start at **[docs/README.md](docs/README.md)**.
 
-**[docs/README.md](docs/README.md)**
-
-Tool-specific guides (added as we go):
-
-| Topic | README |
+| Topic | Guide |
 |-------|--------|
-| Docker & Compose | [docs/docker/README.md](docs/docker/README.md) |
-| Terraform (Azure VM) | [docs/terraform/README.md](docs/terraform/README.md) |
+| Docker (local) | [docs/docker/README.md](docs/docker/README.md) |
+| Terraform (VM, Postgres, Blob) | [docs/terraform/README.md](docs/terraform/README.md) |
+| CI/CD | [docs/cicd/README.md](docs/cicd/README.md) |
+| Nginx | [docs/nginx/README.md](docs/nginx/README.md) |
+| Backups | [docs/backup/README.md](docs/backup/README.md) |
 
 ## Repo layout
 
 ```
-├── addons/              # Odoo custom modules
-├── Dockerfile
-├── docker-compose.yml
-└── docs/                # Per-tool documentation
+├── addons/                    # Custom Odoo modules
+├── scripts/                   # backup.sh, restore.sh
+├── terraform/                 # Azure VM, Postgres, Blob
+├── .github/workflows/         # Build + deploy pipeline
+├── docker-compose.yml         # Local dev (Postgres + Odoo)
+├── docker-compose.azure.yml     # VM (Odoo only → Azure Postgres)
+└── docs/                      # Per-topic guides
 ```
 
-## Roadmap (high level)
+## Quick start (local)
 
-1. Local Docker
-2. GitHub + Terraform (Azure)
-3. CI/CD
-4. VM deploy
-5. k8s, secrets, observability
+```bash
+docker compose up -d --build
+# http://localhost:8069
+```
 
-For steps, commands, and what we did at each stage — see the README in `docs/` for that tool.
+## Roadmap
+
+- [x] Local Docker
+- [x] Azure VM + private PostgreSQL
+- [x] CI/CD to VM
+- [x] Nginx + backups to Blob
+- [ ] Staging VM / restore drill
+- [ ] k8s, TLS, observability
