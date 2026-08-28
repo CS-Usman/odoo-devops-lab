@@ -40,3 +40,26 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN
+          script: |
+            echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u CS-Usman --password-stdin
+            cd ~/odoo-devops-lab
+            git pull origin main
+            sudo docker compose -f docker-compose.azure.yml pull
+            sudo docker compose -f docker-compose.azure.yml up -d
+            sudo docker compose -f docker-compose.azure.yml ps

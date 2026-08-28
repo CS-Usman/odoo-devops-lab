@@ -6,7 +6,7 @@
 
 services:
   odoo:
-    build: .
+    image: ghcr.io/cs-usman/odoo-devops-lab:latest
     ports:
       - "8069:8069"
     environment:
