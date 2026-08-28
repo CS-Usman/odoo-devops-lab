@@ -32,7 +32,6 @@ fi
 DB_PORT="${DB_PORT:-5432}"
 AZURE_STORAGE_CONTAINER="${AZURE_STORAGE_CONTAINER:-odoo-backups}"
 ODOO_DB_NAME="${ODOO_DB_NAME:-odoo_devops_lab}"
-VOLUME_NAME="odoo-devops-lab_odoo-data"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
@@ -71,11 +70,10 @@ sudo docker run --rm \
   -d "${ODOO_DB_NAME}" --clean --if-exists --no-owner --role="${DB_USER}" \
   "/backup/db.dump"
 
-VOLUME_PATH="$(sudo docker volume inspect "${VOLUME_NAME}" --format '{{ .Mountpoint }}')"
-FILESTORE_DIR="${VOLUME_PATH}/filestore"
-sudo rm -rf "${FILESTORE_DIR}/${ODOO_DB_NAME}"
-sudo mkdir -p "${FILESTORE_DIR}"
-sudo tar xzf "${WORKDIR}/filestore.tar.gz" -C "${FILESTORE_DIR}"
+FILESTORE="/var/lib/odoo/filestore/${ODOO_DB_NAME}"
+sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo rm -rf "${FILESTORE}"
+sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo \
+  tar xzf - -C /var/lib/odoo/filestore < "${WORKDIR}/filestore.tar.gz"
 
 echo "[restore] Start Odoo..."
 sudo docker compose -f "${COMPOSE_FILE}" start odoo

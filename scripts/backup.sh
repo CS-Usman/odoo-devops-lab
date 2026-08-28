@@ -37,17 +37,18 @@ sudo docker run --rm \
   "$ODOO_DB_NAME" > "${WORKDIR}/db.dump"
 
 echo "[backup] Filestore archive..."
-VOLUME_NAME="odoo-devops-lab_odoo-data"
-VOLUME_PATH="$(sudo docker volume inspect "${VOLUME_NAME}" --format '{{ .Mountpoint }}')"
-FILESTORE="${VOLUME_PATH}/filestore/${ODOO_DB_NAME}"
+FILESTORE="/var/lib/odoo/filestore/${ODOO_DB_NAME}"
 
-if [[ ! -d "$FILESTORE" ]]; then
-  echo "Filestore not found: ${FILESTORE}" >&2
+if ! sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo test -d "${FILESTORE}"; then
+  echo "Filestore not found in Odoo container: ${FILESTORE}" >&2
+  echo "Available filestore databases:" >&2
+  sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo ls -1 /var/lib/odoo/filestore >&2 || true
   exit 1
 fi
 
-sudo tar czf "${WORKDIR}/filestore.tar.gz" -C "$(dirname "$FILESTORE")" "$(basename "$FILESTORE")"
-sudo chown "$(id -u):$(id -g)" "${WORKDIR}/filestore.tar.gz"
+sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo \
+  tar czf - -C /var/lib/odoo/filestore "$(basename "${FILESTORE}")" \
+  > "${WORKDIR}/filestore.tar.gz"
 
 echo "[backup] Upload to blob://${AZURE_STORAGE_CONTAINER}/${STAMP}/..."
 export AZURE_STORAGE_KEY
