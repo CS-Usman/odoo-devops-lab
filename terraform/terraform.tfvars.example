@@ -6,7 +6,7 @@
 location             = "eastus"
 resource_group_name  = "rg-odoo-devops-lab"
 vm_name              = "vm-odoo-lab"
-vm_size              = "Standard_B1ms"
+vm_size              = "Standard_B2s"
 admin_username       = "azureuser"
 
 # Paste: cat ~/.ssh/azure_vm_key.pub  (must be ssh-rsa — Azure rejects ed25519)

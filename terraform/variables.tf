@@ -17,9 +17,9 @@ variable "vm_name" {
 }
 
 variable "vm_size" {
-  description = "VM size (B1ms/B2s — if SkuNotAvailable, try another size or region)"
+  description = "VM size (B2s = 4 GB — needed for k3s; B1s = 1 GB compose only)"
   type        = string
-  default     = "Standard_B1s"
+  default     = "Standard_B2s"
 }
 
 variable "admin_username" {
