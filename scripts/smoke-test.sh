@@ -21,7 +21,10 @@ health_ok() {
 echo "[smoke] GET ${HEALTH_URL} (up to ${MAX_ATTEMPTS} attempts)"
 RESP=""
 for ((i = 1; i <= MAX_ATTEMPTS; i++)); do
-  HTTP_CODE="$(curl -sS -o "$BODY_FILE" -w '%{http_code}' --max-time 20 "${HEALTH_URL}" 2>/dev/null || echo "000")"
+  HTTP_CODE="000"
+  if curl -sS -o "$BODY_FILE" -w '%{http_code}' --max-time 20 "${HEALTH_URL}" > /tmp/smoke-http-code 2>/dev/null; then
+    HTTP_CODE="$(tr -d '\n' < /tmp/smoke-http-code)"
+  fi
   RESP="$(cat "$BODY_FILE" 2>/dev/null || true)"
 
   if [[ "$HTTP_CODE" == "200" ]] && health_ok "$RESP"; then
@@ -36,6 +39,7 @@ for ((i = 1; i <= MAX_ATTEMPTS; i++)); do
 
   if (( i == MAX_ATTEMPTS )); then
     echo "[smoke] FAILED — health check never returned 200 + status ok" >&2
+    echo "[smoke] Hint: HTTP 000 = cannot reach VM — check Azure NSG :80 and GitHub secret VM_HOST" >&2
     curl -sv "${HEALTH_URL}" 2>&1 | tail -20 >&2 || true
     exit 1
   fi

@@ -132,6 +132,18 @@ until curl -sf --max-time 15 http://127.0.0.1/devops/health | grep -qE '"status"
 done
 echo "[k8s] Prod health OK on :80"
 
+PUBLIC_IP="$(curl -sf ifconfig.me 2>/dev/null || true)"
+if [[ -n "$PUBLIC_IP" ]]; then
+  echo "[k8s] Check public IP http://${PUBLIC_IP}/devops/health ..."
+  if curl -sf --max-time 15 "http://${PUBLIC_IP}/devops/health" | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+    echo "[k8s] Public IP health OK"
+  else
+    echo "[k8s] WARNING: localhost OK but public IP failed — Azure NSG :80 or wrong VM_HOST in GitHub?" >&2
+    echo "[k8s]   terraform output public_ip  →  update GitHub secret VM_HOST" >&2
+    ss -tlnp | grep ':80' >&2 || true
+  fi
+fi
+
 echo ""
 echo "Prod:    http://$(curl -sf ifconfig.me 2>/dev/null || echo '<VM_IP>')/  → Azure Postgres"
 echo "Staging: http://$(curl -sf ifconfig.me 2>/dev/null || echo '<VM_IP>'):8080/ → VM postgres-staging pod"
