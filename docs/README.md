@@ -9,6 +9,7 @@ Lab notes by phase. Each folder is a short overview + steps.
 | 3 | CI/CD — lint, Trivy, deploy, smoke test | [cicd/README.md](cicd/README.md) |
 | 4 | Nginx reverse proxy | [nginx/README.md](nginx/README.md) |
 | 4b | Backups — DB + filestore → Blob | [backup/README.md](backup/README.md) |
+| 5 | k3s + Helm (prod + staging) | [k3s/README.md](k3s/README.md) |
 
 **Ops**
 
@@ -17,6 +18,4 @@ Lab notes by phase. Each folder is a short overview + steps.
 | [IP-CHANGE.md](IP-CHANGE.md) | VM public IP changed → update `VM_HOST` |
 | [RUNBOOK.md](RUNBOOK.md) | Rebuild drill, deploy failures, recovery |
 
-**Suggested order:** Docker → Terraform → CI/CD → Nginx → Backups.
-
-**Next (master plan):** Phase 5 k3s → Phase 6 Vault → Phase 7 Grafana/Loki → Phase 8 Argo CD.
+**Suggested order:** Docker → Terraform → CI/CD → Nginx → Backups → k3s.

@@ -1,0 +1,17 @@
+# Production — http://<VM_IP>/
+
+fullnameOverride: odoo-prod
+
+odoo:
+  dbName: odoo_devops_lab
+
+persistence:
+  hostPath: /srv/odoo/prod
+
+ingress:
+  entryPoint: web
+  port: 80
+
+resources:
+  limits:
+    memory: "1792Mi"

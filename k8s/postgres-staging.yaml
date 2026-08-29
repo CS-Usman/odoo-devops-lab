@@ -1,0 +1,51 @@
+# Staging PostgreSQL on VM (k3s pod) — not Azure Postgres.
+# Secret created by deploy-k8s.sh
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-staging
+  namespace: odoo
+spec:
+  selector:
+    app: postgres-staging
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-staging
+  namespace: odoo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-staging
+  template:
+    metadata:
+      labels:
+        app: postgres-staging
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-staging
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+      volumes:
+        - name: data
+          hostPath:
+            path: /srv/odoo/postgres-staging
+            type: DirectoryOrCreate

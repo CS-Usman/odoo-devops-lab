@@ -27,6 +27,7 @@ Start at **[docs/README.md](docs/README.md)**.
 | CI/CD | [docs/cicd/README.md](docs/cicd/README.md) |
 | Nginx | [docs/nginx/README.md](docs/nginx/README.md) |
 | Backups | [docs/backup/README.md](docs/backup/README.md) |
+| k3s (prod + staging) | [docs/k3s/README.md](docs/k3s/README.md) |
 | IP change | [docs/IP-CHANGE.md](docs/IP-CHANGE.md) |
 | Runbook | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
 
@@ -35,7 +36,9 @@ Start at **[docs/README.md](docs/README.md)**.
 ```
 ├── addons/                    # Custom Odoo modules
 ├── ansible/                   # VM bootstrap playbook
-├── scripts/                   # backup, restore, smoke-test, update-vm-ip
+├── helm/odoo/                 # Kubernetes Helm chart
+├── k8s/                       # Traefik config for k3s
+├── scripts/                   # backup, k3s install, deploy-k8s
 ├── terraform/                 # Azure VM, Postgres, Blob, cloud-init template
 ├── .github/workflows/         # ci.yml + docker-build.yml
 ├── docker-compose.yml         # Local dev
@@ -59,7 +62,7 @@ pre-commit install    # optional — see docs/cicd/README.md
 | 3 | CI/CD (lint, Trivy, Gitleaks, smoke test) | Done |
 | 4 | Terraform + Ansible bootstrap + runbook | Done |
 | 4b | Blob backups + cron | Done |
-| 5 | k3s + Helm | Next |
+| 5 | k3s + Helm (prod + staging) | In progress — [docs/k3s/README.md](docs/k3s/README.md) |
 | 6 | Vault + secrets | — |
 | 7 | Prometheus, Grafana, Loki, alerts | — |
 | 8 | Argo CD, GitOps, restore drill | Partial (Blob backups done) |

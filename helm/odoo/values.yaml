@@ -1,0 +1,48 @@
+# Default values — override with values-prod.yaml or values-staging.yaml
+
+nameOverride: odoo
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/cs-usman/odoo-devops-lab
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets: []
+  # - name: ghcr-pull
+
+# Create with: kubectl create secret generic odoo-db --from-literal=...
+existingSecret: odoo-db
+
+database:
+  host: ""   # empty = DB_HOST from secret (Azure Postgres for prod)
+
+odoo:
+  dbPort: "5432"
+  proxyMode: "true"
+  dbName: odoo_devops_lab
+
+persistence:
+  enabled: true
+  hostPath: /srv/odoo/data
+
+dockerSocket:
+  enabled: true
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1536Mi"
+    cpu: "1000m"
+
+ingress:
+  enabled: true
+  className: traefik
+  entryPoint: web
+  port: 80
+
+service:
+  port: 8069
+  longpollingPort: 8072

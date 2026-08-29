@@ -1,0 +1,3 @@
+# Optional — when ghcr-pull secret exists (private GHCR package)
+imagePullSecrets:
+  - name: ghcr-pull
