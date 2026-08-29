@@ -34,7 +34,7 @@ jobs:
           images: ghcr.io/cs-usman/odoo-devops-lab
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=
+            type=sha,prefix=,format=long
 
       - name: Build and push
         uses: docker/build-push-action@v6
