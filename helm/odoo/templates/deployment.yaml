@@ -27,6 +27,9 @@ spec:
           ports:
             - name: http
               containerPort: 8069
+              {{- if .Values.service.hostPort }}
+              hostPort: {{ .Values.service.hostPort }}
+              {{- end }}
             - name: longpolling
               containerPort: 8072
           env:

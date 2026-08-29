@@ -46,3 +46,4 @@ ingress:
 service:
   port: 8069
   longpollingPort: 8072
+  hostPort: null   # set in values-staging.yaml (8080)

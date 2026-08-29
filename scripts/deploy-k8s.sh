@@ -17,8 +17,8 @@ if ! command -v helm >/dev/null; then
 fi
 
 if ! ss -tln | grep -q ':80 '; then
-  echo "Nothing listening on :80 — Traefik is not running. Run ./scripts/fix-traefik.sh first." >&2
-  exit 1
+  echo "[k8s] Traefik not on :80 — running fix-traefik.sh..."
+  "${SCRIPT_DIR}/fix-traefik.sh"
 fi
 
 STAGING_USER="${STAGING_DB_USER:-odoo}"

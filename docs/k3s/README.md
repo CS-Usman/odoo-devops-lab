@@ -10,9 +10,11 @@
 Staging DB is like local `docker-compose.yml` Postgres — delete/recreate the pod or wipe `/srv/odoo/postgres-staging` anytime.
 
 ```text
-http://<VM_IP>/          → odoo-prod     → Azure Postgres
-http://<VM_IP>:8080/     → odoo-staging  → postgres-staging (k3s on VM)
+http://<VM_IP>/          → odoo-prod     → Traefik :80 → Azure Postgres
+http://<VM_IP>:8080/     → odoo-staging  → hostPort 8080 → VM postgres-staging
 ```
+
+Prod uses k3s **default Traefik** on `:80`. Staging uses **hostPort `8080`** on the pod (no custom Traefik entrypoint — that breaks the bundled chart v40).
 
 ---
 
@@ -83,6 +85,7 @@ No Azure cost impact.
 | `role "azure_pg_admin" does not exist` on seed | `git pull` and re-run `./scripts/seed-staging.sh` (`--no-acl` on dump) |
 | Rollout timeout / old replica pending | hostPath needs `Recreate` strategy — `git pull` and re-run deploy |
 | Empty `curl :80/devops/health` but pods Running | **Traefik not running** — `./scripts/fix-traefik.sh` then `./scripts/deploy-k8s.sh` |
+| `helm-install-traefik` job Error | Remove custom Traefik config: `./scripts/fix-traefik.sh` (deletes `traefik-odoo-config.yaml`) |
 | Prod down after migrate | Finish `./scripts/deploy-k8s.sh` — Compose Odoo was stopped on purpose |
 
 ---
@@ -92,5 +95,6 @@ No Azure cost impact.
 | Path | Purpose |
 |------|---------|
 | `k8s/postgres-staging.yaml` | Staging Postgres pod on VM |
-| `helm/odoo/values-prod.yaml` | Azure DB |
-| `helm/odoo/values-staging.yaml` | VM postgres-staging service |
+| `scripts/fix-traefik.sh` | Restore default k3s Traefik on `:80` |
+| `helm/odoo/values-prod.yaml` | Azure DB + Traefik IngressRoute |
+| `helm/odoo/values-staging.yaml` | VM postgres + hostPort `:8080` |

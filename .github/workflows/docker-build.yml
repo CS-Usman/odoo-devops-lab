@@ -86,6 +86,7 @@ jobs:
             cd ~/odoo-devops-lab
             git pull origin main
             chmod +x scripts/*.sh
+            # deploy-k8s.sh runs fix-traefik.sh automatically if :80 is down
             ./scripts/deploy-k8s.sh
 
       - name: Smoke test
