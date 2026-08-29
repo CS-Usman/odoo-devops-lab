@@ -28,7 +28,7 @@ push main
 | `.github/workflows/ci.yml` | PR + push | pre-commit, Gitleaks, Trivy |
 | `.github/workflows/docker-build.yml` | push `main` | Build, scan, push, k3s deploy, smoke test |
 
-Deploy runs `./scripts/deploy-k8s.sh` on the VM (Helm + Traefik IngressRoute). If `:80` is down, it auto-runs `fix-traefik.sh` first (may restart k3s once).
+Deploy runs `./scripts/deploy-k8s.sh` (disables Traefik, Helm upgrade, hostPort `:80` / `:8080`).
 
 ## VM prerequisites for deploy
 

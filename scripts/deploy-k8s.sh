@@ -16,10 +16,7 @@ if ! command -v helm >/dev/null; then
   exit 1
 fi
 
-if ! ss -tln | grep -q ':80 '; then
-  echo "[k8s] Traefik not on :80 — running fix-traefik.sh..."
-  "${SCRIPT_DIR}/fix-traefik.sh"
-fi
+"${SCRIPT_DIR}/disable-traefik.sh"
 
 STAGING_USER="${STAGING_DB_USER:-odoo}"
 STAGING_PASSWORD="${STAGING_DB_PASSWORD:-odoo-staging-change-me}"
@@ -79,8 +76,9 @@ HELM_SET=(--set "image.tag=${IMAGE_TAG}")
 
 echo "[k8s] Image tag: ${IMAGE_TAG}"
 
-# Legacy Ingress objects are replaced by Traefik IngressRoute CRDs.
+# Legacy routing CRs — Odoo uses hostPort now.
 kubectl -n odoo delete ingress odoo-prod odoo-staging --ignore-not-found 2>/dev/null || true
+kubectl -n odoo delete ingressroute odoo-prod odoo-staging --ignore-not-found 2>/dev/null || true
 
 # Compose is retired after k3s cutover — keep it stopped if present.
 if [[ -f "${REPO_DIR}/docker-compose.azure.yml" ]]; then
@@ -113,16 +111,14 @@ rollout_wait() {
 
 rollout_wait odoo-prod
 rollout_wait odoo-staging
-kubectl -n odoo get pods,svc,ingressroute
+kubectl -n odoo get pods,svc
 
-echo "[k8s] Quick routing check (Traefik → Odoo)..."
-if curl -sf --max-time 10 http://127.0.0.1/devops/health | grep -q '"status"'; then
+echo "[k8s] Health check (hostPort :80 / :8080)..."
+if curl -sf --max-time 30 http://127.0.0.1/devops/health | grep -q '"status"'; then
   echo "[k8s] Prod health OK on :80"
 else
-  echo "[k8s] WARNING: http://127.0.0.1/devops/health not OK — try:" >&2
-  echo "  kubectl -n odoo get ingressroute" >&2
-  echo "  kubectl -n kube-system get pods -l app.kubernetes.io/name=traefik" >&2
-  echo "  curl -v http://127.0.0.1/devops/health" >&2
+  echo "[k8s] WARNING: http://127.0.0.1/devops/health not OK yet (Odoo may still be starting)" >&2
+  curl -sv http://127.0.0.1/devops/health 2>&1 | tail -5 >&2 || true
 fi
 
 echo ""

@@ -86,7 +86,7 @@ jobs:
             cd ~/odoo-devops-lab
             git pull origin main
             chmod +x scripts/*.sh
-            # deploy-k8s.sh runs fix-traefik.sh automatically if :80 is down
+            # deploy-k8s.sh disables Traefik and rolls out Odoo on hostPort :80/:8080
             ./scripts/deploy-k8s.sh
 
       - name: Smoke test
