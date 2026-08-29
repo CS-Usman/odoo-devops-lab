@@ -37,6 +37,7 @@ sudo docker run --rm \
   -e PGPASSWORD="$DB_PASSWORD" \
   postgres:16 \
   pg_dump -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" -Fc \
+  --no-owner --no-acl \
   "$PROD_DB" > "${WORKDIR}/prod.dump"
 
 echo "[seed] Restore into VM postgres-staging (${STAGING_DB})..."
@@ -51,7 +52,7 @@ sudo docker run --rm \
   -v "${WORKDIR}:/backup:ro" \
   postgres:16 \
   pg_restore -h 127.0.0.1 -p 15432 -U "$STAGING_USER" \
-  -d "${STAGING_DB}" --clean --if-exists --no-owner --role="${STAGING_USER}" \
+  -d "${STAGING_DB}" --clean --if-exists --no-owner --no-acl --role="${STAGING_USER}" \
   "/backup/prod.dump"
 
 kill "$PF_PID" 2>/dev/null || true

@@ -11,6 +11,11 @@ CHART="${REPO_DIR}/helm/odoo"
 
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 
+if ! command -v helm >/dev/null; then
+  echo "helm not found — run ./scripts/install-k3s.sh first (installs Helm too)" >&2
+  exit 1
+fi
+
 STAGING_USER="${STAGING_DB_USER:-odoo}"
 STAGING_PASSWORD="${STAGING_DB_PASSWORD:-odoo-staging-change-me}"
 

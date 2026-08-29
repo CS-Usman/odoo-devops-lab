@@ -11,11 +11,24 @@ if ! command -v curl >/dev/null; then
   sudo apt-get update && sudo apt-get install -y curl
 fi
 
-echo "[k3s] Install k3s..."
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644" sh -
-
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+if ! command -v k3s >/dev/null; then
+  echo "[k3s] Install k3s..."
+  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644" sh -
+else
+  echo "[k3s] k3s already installed — skipping install"
+fi
+
 echo "[k3s] Wait for node..."
+deadline=$((SECONDS + 120))
+until kubectl get nodes -o name 2>/dev/null | grep -q .; do
+  if (( SECONDS >= deadline )); then
+    echo "Timed out waiting for k3s node to register" >&2
+    exit 1
+  fi
+  sleep 2
+done
 kubectl wait --for=condition=Ready node --all --timeout=120s
 
 echo "[k3s] Configure Traefik (:80 prod, :8080 staging)..."

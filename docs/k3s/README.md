@@ -43,9 +43,11 @@ cd ~/odoo-devops-lab && git pull && chmod +x scripts/*.sh
 ## Step 3 — k3s + migrate (VM)
 
 ```bash
-./scripts/install-k3s.sh
+./scripts/install-k3s.sh   # k3s + Helm + Traefik; safe to re-run
 ./scripts/migrate-compose-to-k8s.sh
 ```
+
+If `install-k3s.sh` stopped at “no matching resources found”, k3s is still running — **re-run** the script after `git pull` (it now waits for the node and installs Helm).
 
 ---
 
@@ -69,6 +71,17 @@ sudo rm -rf /srv/odoo/postgres-staging /srv/odoo/staging
 ```
 
 No Azure cost impact.
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `helm: command not found` | Re-run `./scripts/install-k3s.sh` (installs Helm) |
+| `no matching resources found` (node wait) | k3s started; re-run `./scripts/install-k3s.sh` |
+| `role "azure_pg_admin" does not exist` on seed | `git pull` and re-run `./scripts/seed-staging.sh` (`--no-acl` on dump) |
+| Prod down after migrate | Finish `./scripts/deploy-k8s.sh` — Compose Odoo was stopped on purpose |
 
 ---
 
