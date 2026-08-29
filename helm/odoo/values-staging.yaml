@@ -20,4 +20,4 @@ ingress:
 
 resources:
   limits:
-    memory: "1024Mi"
+    memory: "768Mi"

@@ -81,6 +81,8 @@ No Azure cost impact.
 | `helm: command not found` | Re-run `./scripts/install-k3s.sh` (installs Helm) |
 | `no matching resources found` (node wait) | k3s started; re-run `./scripts/install-k3s.sh` |
 | `role "azure_pg_admin" does not exist` on seed | `git pull` and re-run `./scripts/seed-staging.sh` (`--no-acl` on dump) |
+| Rollout timeout / old replica pending | hostPath needs `Recreate` strategy — `git pull` and re-run deploy |
+| Empty `curl :80/devops/health` but pods Running | **Traefik not running** — `./scripts/fix-traefik.sh` then `./scripts/deploy-k8s.sh` |
 | Prod down after migrate | Finish `./scripts/deploy-k8s.sh` — Compose Odoo was stopped on purpose |
 
 ---

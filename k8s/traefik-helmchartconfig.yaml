@@ -1,5 +1,5 @@
 # k3s built-in Traefik — expose :80 (prod) and :8080 (staging).
-# Apply after k3s install: sudo kubectl apply -f k8s/traefik-helmchartconfig.yaml
+# Installed by install-k3s.sh into /var/lib/rancher/k3s/server/manifests/
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
@@ -9,10 +9,7 @@ spec:
   valuesContent: |-
     ports:
       web:
-        port: 80
         exposedPort: 80
-        expose:
-          default: true
       webstaging:
         port: 8080
         exposedPort: 8080

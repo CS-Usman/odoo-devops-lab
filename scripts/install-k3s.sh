@@ -32,7 +32,7 @@ done
 kubectl wait --for=condition=Ready node --all --timeout=120s
 
 echo "[k3s] Configure Traefik (:80 prod, :8080 staging)..."
-kubectl apply -f "${REPO_DIR}/k8s/traefik-helmchartconfig.yaml"
+"${SCRIPT_DIR}/fix-traefik.sh"
 
 echo "[k3s] Disable host Nginx (Traefik takes :80)..."
 if systemctl is-active nginx >/dev/null 2>&1; then

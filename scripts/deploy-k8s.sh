@@ -16,6 +16,11 @@ if ! command -v helm >/dev/null; then
   exit 1
 fi
 
+if ! ss -tln | grep -q ':80 '; then
+  echo "Nothing listening on :80 — Traefik is not running. Run ./scripts/fix-traefik.sh first." >&2
+  exit 1
+fi
+
 STAGING_USER="${STAGING_DB_USER:-odoo}"
 STAGING_PASSWORD="${STAGING_DB_PASSWORD:-odoo-staging-change-me}"
 
@@ -74,6 +79,9 @@ HELM_SET=(--set "image.tag=${IMAGE_TAG}")
 
 echo "[k8s] Image tag: ${IMAGE_TAG}"
 
+# Legacy Ingress objects are replaced by Traefik IngressRoute CRDs.
+kubectl -n odoo delete ingress odoo-prod odoo-staging --ignore-not-found 2>/dev/null || true
+
 # Compose is retired after k3s cutover — keep it stopped if present.
 if [[ -f "${REPO_DIR}/docker-compose.azure.yml" ]]; then
   sudo docker compose -f "${REPO_DIR}/docker-compose.azure.yml" stop 2>/dev/null || true
@@ -93,9 +101,29 @@ helm upgrade --install odoo-staging "$CHART" \
   "${HELM_EXTRA[@]}" \
   "${HELM_SET[@]}"
 
-kubectl -n odoo rollout status deployment/odoo-prod --timeout=180s
-kubectl -n odoo rollout status deployment/odoo-staging --timeout=180s
-kubectl -n odoo get pods,svc,ingress
+rollout_wait() {
+  local dep=$1
+  if ! kubectl -n odoo rollout status "deployment/${dep}" --timeout=600s; then
+    echo "[k8s] ${dep} rollout failed — diagnostics:" >&2
+    kubectl -n odoo get pods -l "app.kubernetes.io/name=${dep}" -o wide >&2 || true
+    kubectl -n odoo describe pod -l "app.kubernetes.io/name=${dep}" 2>&1 | tail -50 >&2 || true
+    return 1
+  fi
+}
+
+rollout_wait odoo-prod
+rollout_wait odoo-staging
+kubectl -n odoo get pods,svc,ingressroute
+
+echo "[k8s] Quick routing check (Traefik → Odoo)..."
+if curl -sf --max-time 10 http://127.0.0.1/devops/health | grep -q '"status"'; then
+  echo "[k8s] Prod health OK on :80"
+else
+  echo "[k8s] WARNING: http://127.0.0.1/devops/health not OK — try:" >&2
+  echo "  kubectl -n odoo get ingressroute" >&2
+  echo "  kubectl -n kube-system get pods -l app.kubernetes.io/name=traefik" >&2
+  echo "  curl -v http://127.0.0.1/devops/health" >&2
+fi
 
 echo ""
 echo "Prod:    http://$(curl -sf ifconfig.me 2>/dev/null || echo '<VM_IP>')/  → Azure Postgres"
