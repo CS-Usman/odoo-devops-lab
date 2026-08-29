@@ -9,7 +9,7 @@ PR / push
   → ci.yml: pre-commit, Gitleaks, Trivy (build only)
 
 push main
-  → docker-build.yml: build → Trivy → push GHCR → SSH deploy → smoke test
+  → docker-build.yml: build → Trivy → push GHCR → SSH k3s deploy → smoke test
 ```
 
 ## GitHub secrets
@@ -26,7 +26,21 @@ push main
 | File | When | What |
 |------|------|------|
 | `.github/workflows/ci.yml` | PR + push | pre-commit, Gitleaks, Trivy |
-| `.github/workflows/docker-build.yml` | push `main` | Build, scan, push, deploy, smoke test |
+| `.github/workflows/docker-build.yml` | push `main` | Build, scan, push, k3s deploy, smoke test |
+
+Deploy runs `./scripts/deploy-k8s.sh` on the VM (Helm + Traefik). Docker Compose is no longer started by CI.
+
+## VM prerequisites for deploy
+
+k3s and Helm must be installed once on the VM:
+
+```bash
+./scripts/install-k3s.sh
+./scripts/migrate-compose-to-k8s.sh
+./scripts/deploy-k8s.sh
+```
+
+After that, every push to `main` rolls out the new image tag (`github.sha`) to both `odoo-prod` and `odoo-staging`.
 
 ## Local pre-commit (once)
 

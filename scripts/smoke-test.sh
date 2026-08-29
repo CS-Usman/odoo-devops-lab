@@ -8,9 +8,25 @@ set -euo pipefail
 
 BASE_URL="http://${VM_HOST}"
 HEALTH_URL="${BASE_URL}/devops/health"
+MAX_ATTEMPTS="${SMOKE_ATTEMPTS:-30}"
+SLEEP_SECS="${SMOKE_SLEEP:-10}"
 
-echo "[smoke] GET ${HEALTH_URL}"
-RESP="$(curl -sf "${HEALTH_URL}")"
+echo "[smoke] GET ${HEALTH_URL} (up to ${MAX_ATTEMPTS} attempts)"
+RESP=""
+for ((i = 1; i <= MAX_ATTEMPTS; i++)); do
+  if RESP="$(curl -sf "${HEALTH_URL}")"; then
+    echo "[smoke] attempt ${i}: OK"
+    break
+  fi
+  echo "[smoke] attempt ${i}/${MAX_ATTEMPTS}: not ready yet"
+  if (( i == MAX_ATTEMPTS )); then
+    echo "[smoke] FAILED — health check never returned 200" >&2
+    curl -sv "${HEALTH_URL}" || true
+    exit 1
+  fi
+  sleep "${SLEEP_SECS}"
+done
+
 echo "[smoke] ${RESP}"
 
 echo "${RESP}" | grep -q '"status":"ok"' || {

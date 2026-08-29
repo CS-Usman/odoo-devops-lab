@@ -70,22 +70,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to Azure VM
+      - name: Deploy to Azure VM (k3s)
         uses: appleboy/ssh-action@v1.2.0
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          IMAGE_TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
-          envs: GHCR_TOKEN
+          envs: GHCR_TOKEN,IMAGE_TAG
           script: |
-            echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u CS-Usman --password-stdin
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
             cd ~/odoo-devops-lab
             git pull origin main
-            sudo docker compose -f docker-compose.azure.yml pull
-            sudo docker compose -f docker-compose.azure.yml up -d
-            sudo docker compose -f docker-compose.azure.yml ps
+            chmod +x scripts/*.sh
+            ./scripts/deploy-k8s.sh
 
       - name: Smoke test
         env:

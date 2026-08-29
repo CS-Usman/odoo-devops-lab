@@ -69,17 +69,29 @@ if kubectl -n odoo get secret ghcr-pull >/dev/null 2>&1; then
   HELM_EXTRA=(-f "${CHART}/values-ghcr-pull.yaml")
 fi
 
+IMAGE_TAG="${IMAGE_TAG:-latest}"
+HELM_SET=(--set "image.tag=${IMAGE_TAG}")
+
+echo "[k8s] Image tag: ${IMAGE_TAG}"
+
+# Compose is retired after k3s cutover — keep it stopped if present.
+if [[ -f "${REPO_DIR}/docker-compose.azure.yml" ]]; then
+  sudo docker compose -f "${REPO_DIR}/docker-compose.azure.yml" stop 2>/dev/null || true
+fi
+
 echo "[k8s] Helm odoo-prod (Azure DB)..."
 helm upgrade --install odoo-prod "$CHART" \
   -n odoo \
   -f "${CHART}/values-prod.yaml" \
-  "${HELM_EXTRA[@]}"
+  "${HELM_EXTRA[@]}" \
+  "${HELM_SET[@]}"
 
 echo "[k8s] Helm odoo-staging (VM postgres)..."
 helm upgrade --install odoo-staging "$CHART" \
   -n odoo \
   -f "${CHART}/values-staging.yaml" \
-  "${HELM_EXTRA[@]}"
+  "${HELM_EXTRA[@]}" \
+  "${HELM_SET[@]}"
 
 kubectl -n odoo rollout status deployment/odoo-prod --timeout=180s
 kubectl -n odoo rollout status deployment/odoo-staging --timeout=180s
