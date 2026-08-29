@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import json
-
 from odoo import http
 from odoo.http import request
 
 
 class DevopsMonitorController(http.Controller):
-
     @http.route("/devops/health", auth="public", methods=["GET"], csrf=False)
     def health(self):
         """Lightweight health check for CI/CD and uptime monitors."""

@@ -37,6 +37,22 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          load: true
+          tags: ghcr.io/cs-usman/odoo-devops-lab:latest
+          push: false
+
+      - name: Trivy scan (before push)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/cs-usman/odoo-devops-lab:latest
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: Push to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -47,6 +63,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Deploy to Azure VM
         uses: appleboy/ssh-action@v1.2.0
         env:
@@ -63,3 +82,10 @@ jobs:
             sudo docker compose -f docker-compose.azure.yml pull
             sudo docker compose -f docker-compose.azure.yml up -d
             sudo docker compose -f docker-compose.azure.yml ps
+
+      - name: Smoke test
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+        run: |
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh

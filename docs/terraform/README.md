@@ -105,3 +105,34 @@ terraform destroy
 ```
 
 Postgres and storage deletion can take several minutes.
+
+---
+
+## Bootstrap (existing VM)
+
+**Ansible** — from laptop:
+
+```bash
+cp ansible/inventory.example ansible/inventory   # set VM IP
+ansible-playbook -i ansible/inventory ansible/bootstrap.yml
+```
+
+Installs Docker, Compose plugin, git, nginx. Then configure `.env`, Nginx, and compose manually.
+
+**Cloud-init** — `terraform/cloud-init.yaml.tpl` is for **new** VMs only. Adding `custom_data` to an existing VM forces replacement; use Ansible on live VMs instead.
+
+---
+
+## VM IP changed
+
+```bash
+./scripts/update-vm-ip.sh
+```
+
+See [IP-CHANGE.md](../IP-CHANGE.md). Postgres is private VNet — no public PG firewall update.
+
+---
+
+## Rebuild drill
+
+See [RUNBOOK.md](../RUNBOOK.md).

@@ -8,9 +8,9 @@ import re
 import shutil
 import subprocess
 import time
-from datetime import datetime
 
-from odoo import api, models, fields, tools
+from odoo import api, fields, models, tools
+
 _logger = logging.getLogger(__name__)
 
 try:
@@ -144,9 +144,7 @@ class DevopsMonitorCollector(models.AbstractModel):
             result["db_status"] = "ok"
             result["db_message"] = "PostgreSQL responding"
             if self._is_postgresql():
-                self.env.cr.execute(
-                    "SELECT pg_database_size(current_database())"
-                )
+                self.env.cr.execute("SELECT pg_database_size(current_database())")
                 size = self.env.cr.fetchone()[0]
                 result["db_size_mb"] = round(size / (1024 * 1024), 2)
                 self.env.cr.execute(
@@ -254,19 +252,19 @@ class DevopsMonitorCollector(models.AbstractModel):
                     data = json.loads(row)
                 except json.JSONDecodeError:
                     continue
-                lines.append({
-                    "name": data.get("Name", ""),
-                    "container_id": (data.get("ID") or "")[:12],
-                    "cpu_percent": self._parse_docker_percent(data.get("CPUPerc")),
-                    "memory_used_mb": self._parse_docker_mem_mb(data.get("MemUsage")),
-                    "memory_limit_mb": self._parse_docker_mem_mb(
-                        data.get("MemUsage"), index=1
-                    ),
-                    "memory_percent": self._parse_docker_mem_percent(data.get("MemPerc")),
-                    "network_io": data.get("NetIO") or "",
-                    "block_io": data.get("BlockIO") or "",
-                    "pids": int(data.get("PIDs") or 0),
-                })
+                lines.append(
+                    {
+                        "name": data.get("Name", ""),
+                        "container_id": (data.get("ID") or "")[:12],
+                        "cpu_percent": self._parse_docker_percent(data.get("CPUPerc")),
+                        "memory_used_mb": self._parse_docker_mem_mb(data.get("MemUsage")),
+                        "memory_limit_mb": self._parse_docker_mem_mb(data.get("MemUsage"), index=1),
+                        "memory_percent": self._parse_docker_mem_percent(data.get("MemPerc")),
+                        "network_io": data.get("NetIO") or "",
+                        "block_io": data.get("BlockIO") or "",
+                        "pids": int(data.get("PIDs") or 0),
+                    }
+                )
         except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
             _logger.warning("Docker collection error: %s", exc)
         return {
@@ -321,11 +319,11 @@ class DevopsMonitorCollector(models.AbstractModel):
 
     @staticmethod
     def _bytes_to_gb(value):
-        return round(value / (1024 ** 3), 2)
+        return round(value / (1024**3), 2)
 
     @staticmethod
     def _bytes_to_mb(value):
-        return round(value / (1024 ** 2), 2)
+        return round(value / (1024**2), 2)
 
     @staticmethod
     def _parse_docker_percent(value):

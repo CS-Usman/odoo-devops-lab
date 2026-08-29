@@ -1,65 +1,65 @@
 # CI/CD — GitHub Actions → GHCR → Azure VM
 
-Push to `main` builds a Docker image, pushes to GitHub Container Registry (GHCR), then deploys to the Azure VM over SSH.
+Push to `main` builds a Docker image, scans it, pushes to GHCR, deploys to the Azure VM, then runs a smoke test.
 
 ## Flow
 
 ```text
-git push main
-  → GitHub Actions: build image
-  → push ghcr.io/cs-usman/odoo-devops-lab:latest
-  → SSH to VM: git pull, docker compose pull, up -d
-```
+PR / push
+  → ci.yml: pre-commit, Gitleaks, Trivy (build only)
 
-Odoo on the VM uses **`docker-compose.azure.yml`** (Odoo only — DB is Azure Postgres).
+push main
+  → docker-build.yml: build → Trivy → push GHCR → SSH deploy → smoke test
+```
 
 ## GitHub secrets
 
-Set in repo **Settings → Secrets and variables → Actions**:
-
 | Secret | Value |
 |--------|--------|
-| `VM_HOST` | VM public IP (e.g. `172.198.71.246`) |
+| `VM_HOST` | VM public IP |
 | `VM_USER` | `azureuser` |
 | `VM_SSH_PRIVATE_KEY` | Private key for VM SSH |
-| `GHCR_TOKEN` | GitHub PAT with `read:packages` (VM pulls image) |
+| `GHCR_TOKEN` | GitHub PAT with `read:packages` |
 
-## Workflow file
+## Workflows
 
-`.github/workflows/docker-build.yml` — two jobs:
+| File | When | What |
+|------|------|------|
+| `.github/workflows/ci.yml` | PR + push | pre-commit, Gitleaks, Trivy |
+| `.github/workflows/docker-build.yml` | push `main` | Build, scan, push, deploy, smoke test |
 
-1. **build** — build and push to GHCR on every push to `main`
-2. **deploy** — SSH to VM, login to GHCR, pull latest compose stack
+## Local pre-commit (once)
+
+Requires **Docker running** (hadolint hook uses `hadolint/hadolint` image).
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+Hooks: ruff (our module only), hadolint (docker), gitleaks, XML validation via lxml.
+
+## Smoke test
+
+```bash
+VM_HOST=<VM_IP> ./scripts/smoke-test.sh
+```
+
+Hits `GET /devops/health` — checks Odoo + DB (`200` + `"status":"ok"`).
+
+Also runs automatically after deploy in GitHub Actions.
 
 ## VM one-time setup
 
-```bash
-# Clone repo on VM
-git clone https://github.com/CS-Usman/odoo-devops-lab.git ~/odoo-devops-lab
-cd ~/odoo-devops-lab
-
-cp .env.azure.example .env
-# edit .env — DB_* from Terraform, DOCKER_GID from: getent group docker | cut -d: -f3
-
-sudo docker compose -f docker-compose.azure.yml up -d
-```
-
-After that, each push to `main` redeploys automatically.
-
-## Manual deploy trigger
-
-GitHub → **Actions** → **Build and push Docker image** → **Run workflow**.
-
-## Check deploy on VM
+See [terraform](../terraform/README.md) and [nginx](../nginx/README.md). Or:
 
 ```bash
-cd ~/odoo-devops-lab
-sudo docker compose -f docker-compose.azure.yml ps
-sudo docker compose -f docker-compose.azure.yml logs -f odoo --tail=50
+ansible-playbook -i ansible/inventory ansible/bootstrap.yml
 ```
 
 ## What CI/CD does *not* do
 
-- Does not run `terraform apply`
-- Does not set VM `.env` secrets (DB, blob keys) — those stay on the VM
-- Does not run backups — see [backup docs](../backup/README.md)
+- `terraform apply`
+- VM `.env` secrets
+- Backups — [backup](../backup/README.md)

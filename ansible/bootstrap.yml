@@ -1,0 +1,49 @@
+---
+# Bootstrap an existing Azure VM (Docker, Compose, git, nginx).
+# Usage from laptop:
+#   cp ansible/inventory.example ansible/inventory
+#   ansible-playbook -i ansible/inventory ansible/bootstrap.yml
+
+- name: Bootstrap Odoo DevOps lab VM
+  hosts: odoo_vm
+  become: true
+
+  tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+          - git
+          - nginx
+          - libxml2-utils
+        state: present
+        update_cache: true
+
+    - name: Enable Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add admin user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: Clone repo if missing
+      become: false
+      ansible.builtin.git:
+        repo: https://github.com/CS-Usman/odoo-devops-lab.git
+        dest: "{{ ansible_env.HOME }}/odoo-devops-lab"
+        version: main
+      ignore_errors: true
+
+    - name: Reminder — finish manually
+      ansible.builtin.debug:
+        msg: |
+          Next on VM:
+            cp ~/odoo-devops-lab/.env.azure.example ~/.env  # edit DB_* and blob vars
+            configure /etc/nginx/sites-available/odoo (see docs/nginx/README.md)
+            docker compose -f docker-compose.azure.yml up -d

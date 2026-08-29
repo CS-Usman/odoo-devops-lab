@@ -10,8 +10,9 @@ Personal lab for learning DevOps with Odoo 17 — Docker locally, Azure for prod
 | Local dev | Docker Compose — Postgres + Odoo |
 | Azure VM | Odoo container, Nginx on :80 |
 | Database | Azure PostgreSQL Flexible Server v16 (private) |
-| CI/CD | GitHub Actions → GHCR → SSH deploy to VM |
+| CI/CD | pre-commit, Gitleaks, Trivy, GHCR, SSH deploy, smoke test |
 | Backups | `pg_dump` + filestore → Azure Blob (weekly cron) |
+| Bootstrap | Ansible playbook + cloud-init template |
 
 **Live URL:** `http://<VM_IP>/` (Nginx → Odoo on localhost)
 
@@ -26,31 +27,39 @@ Start at **[docs/README.md](docs/README.md)**.
 | CI/CD | [docs/cicd/README.md](docs/cicd/README.md) |
 | Nginx | [docs/nginx/README.md](docs/nginx/README.md) |
 | Backups | [docs/backup/README.md](docs/backup/README.md) |
+| IP change | [docs/IP-CHANGE.md](docs/IP-CHANGE.md) |
+| Runbook | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
 
 ## Repo layout
 
 ```
 ├── addons/                    # Custom Odoo modules
-├── scripts/                   # backup.sh, restore.sh
-├── terraform/                 # Azure VM, Postgres, Blob
-├── .github/workflows/         # Build + deploy pipeline
-├── docker-compose.yml         # Local dev (Postgres + Odoo)
-├── docker-compose.azure.yml     # VM (Odoo only → Azure Postgres)
-└── docs/                      # Per-topic guides
+├── ansible/                   # VM bootstrap playbook
+├── scripts/                   # backup, restore, smoke-test, update-vm-ip
+├── terraform/                 # Azure VM, Postgres, Blob, cloud-init template
+├── .github/workflows/         # ci.yml + docker-build.yml
+├── docker-compose.yml         # Local dev
+├── docker-compose.azure.yml   # VM → Azure Postgres
+└── docs/
 ```
 
 ## Quick start (local)
 
 ```bash
 docker compose up -d --build
+pre-commit install    # optional — see docs/cicd/README.md
 # http://localhost:8069
 ```
 
-## Roadmap
+## Master plan progress
 
-- [x] Local Docker
-- [x] Azure VM + private PostgreSQL
-- [x] CI/CD to VM
-- [x] Nginx + backups to Blob
-- [ ] Staging VM / restore drill
-- [ ] k8s, TLS, observability
+| Phase | Topic | Status |
+|-------|--------|--------|
+| 1–2 | Azure + Docker + Nginx + remote DB | Done |
+| 3 | CI/CD (lint, Trivy, Gitleaks, smoke test) | Done |
+| 4 | Terraform + Ansible bootstrap + runbook | Done |
+| 4b | Blob backups + cron | Done |
+| 5 | k3s + Helm | Next |
+| 6 | Vault + secrets | — |
+| 7 | Prometheus, Grafana, Loki, alerts | — |
+| 8 | Argo CD, GitOps, restore drill | Partial (Blob backups done) |

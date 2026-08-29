@@ -29,7 +29,7 @@ USER odoo
 - `pgdata` → database files (don't lose these)
 - `odoo-data` → Odoo filestore
 
-DB connection for Odoo is via env: `HOST=db`, `USER=odoo`, `PASSWORD=odoo`.  
+DB connection for Odoo is via env: `HOST=db`, `USER=odoo`, `PASSWORD=odoo`.
 `db` is the Postgres service name — not `localhost` from inside the container.
 
 Don't forget the bottom of compose file:

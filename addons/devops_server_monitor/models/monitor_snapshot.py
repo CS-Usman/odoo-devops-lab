@@ -163,15 +163,14 @@ class DevopsMonitorSnapshot(models.Model):
         container_lines = metrics.pop("container_lines", [])
         snapshot = self.create(metrics)
         if container_lines:
-            self.env["devops.monitor.container.line"].create([
-                {**line, "snapshot_id": snapshot.id}
-                for line in container_lines
-            ])
+            self.env["devops.monitor.container.line"].create(
+                [{**line, "snapshot_id": snapshot.id} for line in container_lines]
+            )
         return snapshot
 
     def action_collect_now(self):
         """Manual refresh: collect host/DB/docker metrics and save a new snapshot."""
-        snapshot = self.create_snapshot_from_collector()
+        self.create_snapshot_from_collector()
         return self.action_open_owl_dashboard()
 
     def action_open_dashboard(self):
