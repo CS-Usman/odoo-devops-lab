@@ -63,7 +63,21 @@ resource "azurerm_network_security_rule" "http" {
   network_security_group_name = azurerm_network_security_group.lab.name
 }
 
-# Odoo ports 8069/8072 are not public — Nginx on :80 proxies to localhost only.
+# Odoo ports 8069/8072 are not public — Traefik on :80 / :8080 proxies to k3s.
+
+resource "azurerm_network_security_rule" "staging_http" {
+  name                        = "allow-staging-http"
+  priority                    = 110
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "8080"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.lab.name
+  network_security_group_name = azurerm_network_security_group.lab.name
+}
 
 resource "azurerm_network_interface" "lab" {
   name                = "${var.vm_name}-nic"

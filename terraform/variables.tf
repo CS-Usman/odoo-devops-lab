@@ -73,7 +73,7 @@ variable "postgres_private_dns_zone_name" {
 }
 
 variable "postgres_database_name" {
-  description = "Database created for Odoo"
+  description = "Production database for Odoo (Azure Postgres)"
   type        = string
   default     = "odoo_devops_lab"
 }
