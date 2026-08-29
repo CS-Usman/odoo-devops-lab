@@ -86,7 +86,7 @@ jobs:
             cd ~/odoo-devops-lab
             git pull origin main
             chmod +x scripts/*.sh
-            # deploy-k8s.sh disables Traefik and rolls out Odoo on hostPort :80/:8080
+            # deploy-k8s waits for http://127.0.0.1/devops/health before SSH exits
             ./scripts/deploy-k8s.sh
 
       - name: Smoke test

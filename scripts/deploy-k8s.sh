@@ -116,13 +116,21 @@ kubectl -n odoo get pods,svc
 echo "[k8s] Configure host Nginx (:80 → :8069)..."
 "${SCRIPT_DIR}/setup-nginx-k8s.sh"
 
-echo "[k8s] Health check..."
-if curl -sf --max-time 30 http://127.0.0.1/devops/health | grep -q '"status"'; then
-  echo "[k8s] Prod health OK on :80"
-else
-  echo "[k8s] WARNING: http://127.0.0.1/devops/health not OK yet (Odoo may still be starting)" >&2
-  curl -sv http://127.0.0.1/devops/health 2>&1 | tail -5 >&2 || true
-fi
+echo "[k8s] Wait for prod health on http://127.0.0.1/devops/health ..."
+health_deadline=$((SECONDS + 420))
+until curl -sf --max-time 15 http://127.0.0.1/devops/health | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"'; do
+  if (( SECONDS >= health_deadline )); then
+    echo "[k8s] FAILED — prod health not OK after 7 minutes" >&2
+    kubectl -n odoo get pods -o wide >&2 || true
+    curl -sv http://127.0.0.1/devops/health 2>&1 | tail -15 >&2 || true
+    curl -sv http://127.0.0.1:8069/devops/health 2>&1 | tail -10 >&2 || true
+    systemctl is-active nginx >&2 || true
+    exit 1
+  fi
+  echo "[k8s] Odoo still starting..."
+  sleep 10
+done
+echo "[k8s] Prod health OK on :80"
 
 echo ""
 echo "Prod:    http://$(curl -sf ifconfig.me 2>/dev/null || echo '<VM_IP>')/  → Azure Postgres"
