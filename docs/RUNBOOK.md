@@ -8,11 +8,14 @@ Proves infra is reproducible (Phase 4 drill).
 
 ```bash
 cd terraform
+terraform plan    # B1s → B2s is usually update in-place (data kept)
 terraform apply
 ./../scripts/update-vm-ip.sh    # update GitHub VM_HOST if IP changed
 ```
 
-On the **new VM**:
+**Before resize:** `./scripts/backup.sh` on the VM.
+
+On a **replaced** VM (not a simple size change):
 
 ```bash
 # Option A — Ansible from laptop
