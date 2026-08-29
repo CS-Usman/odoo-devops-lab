@@ -216,6 +216,16 @@ class DevopsMonitorCollector(models.AbstractModel):
 
     @api.model
     def _collect_docker_metrics(self):
+        docker = self._collect_docker_stats_metrics()
+        if docker["container_count"] > 0:
+            return docker
+        k3s = self._collect_k3s_pod_metrics()
+        if k3s["container_count"] > 0:
+            return k3s
+        return docker
+
+    @api.model
+    def _collect_docker_stats_metrics(self):
         lines = []
         if not self._docker_available():
             return {
@@ -272,6 +282,93 @@ class DevopsMonitorCollector(models.AbstractModel):
             "container_count": len(lines),
             "container_lines": lines,
         }
+
+    @api.model
+    def _collect_k3s_pod_metrics(self):
+        """Fallback when k3s/containerd is used instead of Docker (docker ps empty)."""
+        kubeconfig = os.getenv("KUBECONFIG")
+        if not kubeconfig or not os.path.isfile(kubeconfig):
+            return {
+                "docker_available": False,
+                "container_count": 0,
+                "container_lines": [],
+            }
+        namespace = os.getenv("K3S_METRICS_NAMESPACE", "odoo")
+        proc = None
+        for cmd in (["k3s", "kubectl"], ["kubectl"]):
+            try:
+                proc = subprocess.run(
+                    [*cmd, "top", "pods", "-n", namespace, "--no-headers"],
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                    check=False,
+                    env={**os.environ, "KUBECONFIG": kubeconfig},
+                )
+            except FileNotFoundError:
+                continue
+            if proc.returncode == 0 and proc.stdout.strip():
+                break
+        if not proc or proc.returncode != 0 or not proc.stdout.strip():
+            if proc and proc.stderr:
+                _logger.warning("kubectl top failed: %s", proc.stderr.strip())
+            return {
+                "docker_available": True,
+                "container_count": 0,
+                "container_lines": [],
+            }
+        lines = []
+        for row in proc.stdout.splitlines():
+            parts = row.split()
+            if len(parts) < 3:
+                continue
+            name, cpu, mem = parts[0], parts[1], parts[2]
+            lines.append(
+                {
+                    "name": name,
+                    "container_id": "",
+                    "cpu_percent": self._parse_k8s_cpu_percent(cpu),
+                    "memory_used_mb": self._parse_k8s_mem_mb(mem),
+                    "memory_limit_mb": 0.0,
+                    "memory_percent": 0.0,
+                    "network_io": "k3s",
+                    "block_io": "",
+                    "pids": 0,
+                }
+            )
+        return {
+            "docker_available": True,
+            "container_count": len(lines),
+            "container_lines": lines,
+        }
+
+    @api.model
+    def _parse_k8s_cpu_percent(self, value):
+        """Convert kubectl CPU (e.g. 100m) to rough % of 2 vCPU node."""
+        if not value:
+            return 0.0
+        value = value.strip()
+        cores = float(os.getenv("K3S_NODE_CPU_CORES", "2"))
+        if value.endswith("m"):
+            millicores = float(value[:-1])
+            return round((millicores / (cores * 1000)) * 100, 2)
+        return round((float(value) / cores) * 100, 2)
+
+    @api.model
+    def _parse_k8s_mem_mb(self, value):
+        if not value:
+            return 0.0
+        value = value.strip()
+        match = re.match(r"^([\d.]+)\s*([KMG]i?)?", value)
+        if not match:
+            return 0.0
+        amount = float(match.group(1))
+        unit = (match.group(2) or "Mi").lower()
+        if unit in ("gi", "g"):
+            return round(amount * 1024, 1)
+        if unit in ("ki", "k"):
+            return round(amount / 1024, 1)
+        return round(amount, 1)
 
     @api.model
     def _docker_available(self):

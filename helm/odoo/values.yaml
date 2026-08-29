@@ -30,6 +30,11 @@ dockerSocket:
   enabled: true
   gid: null   # host `getent group docker` GID — set automatically by deploy-k8s.sh
 
+# k3s pods run in containerd (docker ps is empty) — use kubectl top as fallback
+k3sMetrics:
+  enabled: true
+  namespace: odoo
+
 resources:
   requests:
     memory: "512Mi"

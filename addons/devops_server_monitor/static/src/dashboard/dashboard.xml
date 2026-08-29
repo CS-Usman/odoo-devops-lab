@@ -322,7 +322,7 @@
                     <div class="col-12 col-lg-6">
                         <div class="card shadow-sm h-100">
                             <div class="card-header fw-bold">
-                                <i class="fa fa-cube me-2"/>Docker Containers
+                                <i class="fa fa-cube me-2"/>Containers
                                 <span class="badge bg-secondary ms-2" t-esc="state.data.docker.container_count"/>
                             </div>
                             <div class="card-body p-0">
@@ -332,7 +332,9 @@
                                     </div>
                                 </t>
                                 <t t-elif="!state.data.docker.containers.length">
-                                    <div class="p-3 text-muted">No running containers reported.</div>
+                                    <div class="p-3 text-muted">
+                                        No running containers reported (k3s uses containerd — refresh after deploy).
+                                    </div>
                                 </t>
                                 <table t-else="" class="table table-sm table-striped mb-0">
                                     <thead>

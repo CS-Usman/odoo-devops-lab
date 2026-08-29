@@ -64,6 +64,12 @@ spec:
               value: {{ .Values.odoo.dbPort | quote }}
             - name: PROXY_MODE
               value: {{ .Values.odoo.proxyMode | quote }}
+            {{- if .Values.k3sMetrics.enabled }}
+            - name: KUBECONFIG
+              value: /etc/rancher/k3s/k3s.yaml
+            - name: K3S_METRICS_NAMESPACE
+              value: {{ .Values.k3sMetrics.namespace | quote }}
+            {{- end }}
           args:
             - odoo
             - -d
@@ -94,6 +100,14 @@ spec:
               mountPath: /var/run/docker.sock
               readOnly: true
             {{- end }}
+            {{- if .Values.k3sMetrics.enabled }}
+            - name: k3s-kubeconfig
+              mountPath: /etc/rancher/k3s
+              readOnly: true
+            - name: k3s-bin
+              mountPath: /usr/local/bin/k3s
+              readOnly: true
+            {{- end }}
       volumes:
         - name: odoo-data
           hostPath:
@@ -104,4 +118,14 @@ spec:
           hostPath:
             path: /var/run/docker.sock
             type: Socket
+        {{- end }}
+        {{- if .Values.k3sMetrics.enabled }}
+        - name: k3s-kubeconfig
+          hostPath:
+            path: /etc/rancher/k3s
+            type: Directory
+        - name: k3s-bin
+          hostPath:
+            path: /usr/local/bin/k3s
+            type: File
         {{- end }}
