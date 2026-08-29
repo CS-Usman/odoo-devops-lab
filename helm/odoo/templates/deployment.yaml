@@ -32,6 +32,9 @@ spec:
               {{- end }}
             - name: longpolling
               containerPort: 8072
+              {{- if .Values.service.longpollingHostPort }}
+              hostPort: {{ .Values.service.longpollingHostPort }}
+              {{- end }}
           env:
             - name: HOST
               {{- if .Values.database.host }}

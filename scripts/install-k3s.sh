@@ -33,11 +33,7 @@ kubectl wait --for=condition=Ready node --all --timeout=120s
 
 "${SCRIPT_DIR}/disable-traefik.sh"
 
-echo "[k3s] Disable host Nginx (Odoo hostPort takes :80)..."
-if systemctl is-active nginx >/dev/null 2>&1; then
-  sudo systemctl stop nginx
-  sudo systemctl disable nginx
-fi
+echo "[k3s] Nginx will proxy :80 → odoo-prod :8069 (configured on deploy)..."
 
 echo "[k3s] Install Helm..."
 if ! command -v helm >/dev/null; then

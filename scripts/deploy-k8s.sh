@@ -113,7 +113,10 @@ rollout_wait odoo-prod
 rollout_wait odoo-staging
 kubectl -n odoo get pods,svc
 
-echo "[k8s] Health check (hostPort :80 / :8080)..."
+echo "[k8s] Configure host Nginx (:80 → :8069)..."
+"${SCRIPT_DIR}/setup-nginx-k8s.sh"
+
+echo "[k8s] Health check..."
 if curl -sf --max-time 30 http://127.0.0.1/devops/health | grep -q '"status"'; then
   echo "[k8s] Prod health OK on :80"
 else

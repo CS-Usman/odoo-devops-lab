@@ -1,5 +1,4 @@
-# Production — http://<VM_IP>/
-# hostPort :80 (no Traefik — ServiceLB unreliable on single-node Azure B2s)
+# Production — http://<VM_IP>/  (Nginx :80 → hostPort 8069)
 
 fullnameOverride: odoo-prod
 
@@ -13,7 +12,8 @@ ingress:
   enabled: false
 
 service:
-  hostPort: 80
+  hostPort: 8069
+  longpollingHostPort: 8072
 
 resources:
   limits:

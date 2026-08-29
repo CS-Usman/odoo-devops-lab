@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Host Nginx :80 → odoo-prod hostPort 8069 (same as pre-k3s Compose setup).
+
+set -euo pipefail
+
+if ! command -v nginx >/dev/null 2>&1; then
+  sudo apt-get update
+  sudo apt-get install -y nginx
+fi
+
+sudo tee /etc/nginx/sites-available/odoo >/dev/null <<'EOF'
+upstream odoo {
+    server 127.0.0.1:8069;
+}
+
+upstream odoochat {
+    server 127.0.0.1:8072;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    proxy_read_timeout 720s;
+    proxy_connect_timeout 720s;
+    proxy_send_timeout 720s;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+    client_max_body_size 100M;
+
+    location / {
+        proxy_pass http://odoo;
+        proxy_redirect off;
+    }
+
+    location /websocket {
+        proxy_pass http://odoochat;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+EOF
+
+sudo ln -sf /etc/nginx/sites-available/odoo /etc/nginx/sites-enabled/odoo
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl enable nginx
+sudo systemctl restart nginx
+
+echo "[nginx] OK — :80 → 127.0.0.1:8069 (odoo-prod hostPort)"

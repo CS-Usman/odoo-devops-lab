@@ -10,11 +10,11 @@
 Staging DB is like local `docker-compose.yml` Postgres — delete/recreate the pod or wipe `/srv/odoo/postgres-staging` anytime.
 
 ```text
-http://<VM_IP>/          → odoo-prod     → hostPort :80  → Azure Postgres
-http://<VM_IP>:8080/     → odoo-staging  → hostPort :8080 → VM postgres-staging
+http://<VM_IP>/          → Nginx :80 → odoo-prod hostPort :8069 → Azure Postgres
+http://<VM_IP>:8080/     → odoo-staging hostPort :8080
 ```
 
-**No Traefik** — bundled ServiceLB did not bind `:80` reliably on this Azure B2s VM. Odoo pods bind host ports directly (same idea as the old Nginx `:80` proxy).
+Prod uses **host Nginx on :80** (same as Phase 4 Compose). k3s Traefik is **disabled** — ServiceLB did not bind :80 on this VM.
 
 ---
 
