@@ -74,6 +74,12 @@ fi
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 HELM_SET=(--set "image.tag=${IMAGE_TAG}")
 
+DOCKER_GID="$(getent group docker | cut -d: -f3 || true)"
+if [[ -n "$DOCKER_GID" ]]; then
+  HELM_SET+=(--set "dockerSocket.gid=${DOCKER_GID}")
+  echo "[k8s] Docker socket supplementalGroup: ${DOCKER_GID}"
+fi
+
 echo "[k8s] Image tag: ${IMAGE_TAG}"
 
 # Legacy routing CRs — Odoo uses hostPort now.

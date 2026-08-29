@@ -28,6 +28,7 @@ persistence:
 
 dockerSocket:
   enabled: true
+  gid: null   # host `getent group docker` GID — set automatically by deploy-k8s.sh
 
 resources:
   requests:

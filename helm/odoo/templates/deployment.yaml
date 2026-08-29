@@ -20,6 +20,11 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if and .Values.dockerSocket.enabled .Values.dockerSocket.gid }}
+      securityContext:
+        supplementalGroups:
+          - {{ .Values.dockerSocket.gid }}
+      {{- end }}
       containers:
         - name: odoo
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
