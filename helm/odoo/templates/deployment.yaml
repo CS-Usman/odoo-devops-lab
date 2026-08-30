@@ -69,6 +69,10 @@ spec:
               value: /etc/rancher/k3s/k3s.yaml
             - name: K3S_METRICS_NAMESPACE
               value: {{ .Values.k3sMetrics.namespace | quote }}
+            - name: KUBE_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
             {{- end }}
           args:
             - odoo

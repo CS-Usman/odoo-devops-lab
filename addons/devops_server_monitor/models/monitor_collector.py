@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 
 from odoo import api, fields, models, tools
@@ -286,8 +287,8 @@ class DevopsMonitorCollector(models.AbstractModel):
     @api.model
     def _collect_k3s_pod_metrics(self):
         """Fallback when k3s/containerd is used instead of Docker (docker ps empty)."""
-        kubeconfig = os.getenv("KUBECONFIG")
-        if not kubeconfig or not os.path.isfile(kubeconfig):
+        kubeconfig = self._k3s_kubeconfig_path()
+        if not kubeconfig:
             return {
                 "docker_available": False,
                 "container_count": 0,
@@ -295,20 +296,28 @@ class DevopsMonitorCollector(models.AbstractModel):
             }
         namespace = os.getenv("K3S_METRICS_NAMESPACE", "odoo")
         proc = None
-        for cmd in (["k3s", "kubectl"], ["kubectl"]):
-            try:
-                proc = subprocess.run(
-                    [*cmd, "top", "pods", "-n", namespace, "--no-headers"],
-                    capture_output=True,
-                    text=True,
-                    timeout=15,
-                    check=False,
-                    env={**os.environ, "KUBECONFIG": kubeconfig},
-                )
-            except FileNotFoundError:
-                continue
-            if proc.returncode == 0 and proc.stdout.strip():
-                break
+        kubectl_env = {**os.environ, "KUBECONFIG": kubeconfig}
+        try:
+            for cmd in (["k3s", "kubectl"], ["kubectl"]):
+                try:
+                    proc = subprocess.run(
+                        [*cmd, "top", "pods", "-n", namespace, "--no-headers"],
+                        capture_output=True,
+                        text=True,
+                        timeout=15,
+                        check=False,
+                        env=kubectl_env,
+                    )
+                except FileNotFoundError:
+                    continue
+                if proc.returncode == 0 and proc.stdout.strip():
+                    break
+        finally:
+            if kubeconfig != os.getenv("KUBECONFIG"):
+                try:
+                    os.unlink(kubeconfig)
+                except OSError:
+                    pass
         if not proc or proc.returncode != 0 or not proc.stdout.strip():
             if proc and proc.stderr:
                 _logger.warning("kubectl top failed: %s", proc.stderr.strip())
@@ -341,6 +350,33 @@ class DevopsMonitorCollector(models.AbstractModel):
             "container_count": len(lines),
             "container_lines": lines,
         }
+
+    @api.model
+    def _k3s_kubeconfig_path(self):
+        """Return kubeconfig path usable from inside the pod (not 127.0.0.1)."""
+        kubeconfig = os.getenv("KUBECONFIG")
+        if not kubeconfig or not os.path.isfile(kubeconfig):
+            return None
+        node_ip = os.getenv("KUBE_NODE_IP")
+        if not node_ip:
+            return kubeconfig
+        try:
+            with open(kubeconfig, encoding="utf-8") as handle:
+                content = handle.read()
+        except OSError as exc:
+            _logger.warning("Cannot read kubeconfig %s: %s", kubeconfig, exc)
+            return None
+        patched = re.sub(
+            r"(server:\s*https://)(127\.0\.0\.1|localhost)(:\d+)",
+            rf"\g<1>{node_ip}\g<3>",
+            content,
+        )
+        if patched == content:
+            return kubeconfig
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        tmp.write(patched)
+        tmp.close()
+        return tmp.name
 
     @api.model
     def _parse_k8s_cpu_percent(self, value):
