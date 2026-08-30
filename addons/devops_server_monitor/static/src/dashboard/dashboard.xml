@@ -43,7 +43,7 @@
     </t>
 
     <t t-name="devops_server_monitor.Dashboard">
-        <div class="o_devops_dashboard o_action o_view_controller">
+        <div class="o_devops_dashboard">
             <div class="o_devops_dashboard_header d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                 <div>
                     <h2 class="mb-1">

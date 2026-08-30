@@ -1,8 +1,13 @@
 .o_devops_dashboard {
+    // Client actions sit inside .o_action (flex + overflow:hidden); this
+    // element must scroll itself when content exceeds the viewport.
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 16px 20px 24px;
     background: linear-gradient(180deg, #f8f9fb 0%, #ffffff 220px);
-    min-height: 100%;
-    position: relative;
 }
 
 .devops-dashboard-loader {

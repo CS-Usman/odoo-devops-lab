@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "DevOps Server Monitor",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "category": "Tools",
     "summary": "Server health dashboard: CPU, RAM, disk, I/O, DB, filestore, Docker containers",
     "description": """
