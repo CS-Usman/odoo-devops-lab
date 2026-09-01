@@ -8,13 +8,13 @@ Personal lab for learning DevOps with Odoo 17 — Docker locally, Azure for prod
 |-------|--------|
 | App | Odoo 17 + `devops_server_monitor` module |
 | Local dev | Docker Compose — Postgres + Odoo |
-| Azure VM | Odoo container, Nginx on :80 |
+| Azure VM | k3s — odoo-prod + odoo-staging pods, Nginx on :80 |
 | Database | Azure PostgreSQL Flexible Server v16 (private) |
 | CI/CD | pre-commit, Gitleaks, Trivy, GHCR, SSH deploy, smoke test |
 | Backups | `pg_dump` + filestore → Azure Blob (weekly cron) |
 | Bootstrap | Ansible playbook + cloud-init template |
 
-**Live URL:** `http://<VM_IP>/` (Nginx → Odoo on localhost)
+**Live URLs:** `http://<VM_IP>/` (prod) · `http://<VM_IP>:8080/` (staging)
 
 ## Documentation
 
@@ -62,7 +62,7 @@ pre-commit install    # optional — see docs/cicd/README.md
 | 3 | CI/CD (lint, Trivy, Gitleaks, smoke test) | Done |
 | 4 | Terraform + Ansible bootstrap + runbook | Done |
 | 4b | Blob backups + cron | Done |
-| 5 | k3s + Helm (prod + staging) | In progress — [docs/k3s/README.md](docs/k3s/README.md) |
+| 5 | k3s + Helm (prod + staging) | Done — [docs/k3s/README.md](docs/k3s/README.md) |
 | 6 | Vault + secrets | — |
 | 7 | Prometheus, Grafana, Loki, alerts | — |
 | 8 | Argo CD, GitOps, restore drill | Partial (Blob backups done) |

@@ -1,5 +1,7 @@
 # Phase 5 — k3s + Helm (prod + staging)
 
+**Status: Done.** Prod and staging run on k3s; CI deploys on every push to `main`. Staging was seeded from prod via `./scripts/seed-staging.sh`.
+
 ## Databases
 
 | Env | Odoo | PostgreSQL | Cost |
