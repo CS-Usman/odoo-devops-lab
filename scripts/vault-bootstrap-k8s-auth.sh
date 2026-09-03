@@ -35,6 +35,14 @@ VAULT_K8S_ROLE="${VAULT_K8S_ROLE:-external-secrets}"
 VAULT_POLICY="${VAULT_POLICY:-odoo-read}"
 TOKEN_DURATION="${TOKEN_DURATION:-87600h}"
 
+TMP_CA=""
+cleanup() {
+  if [[ -n "$TMP_CA" && -f "$TMP_CA" ]]; then
+    rm -f "$TMP_CA"
+  fi
+}
+trap cleanup EXIT
+
 require_cmd() {
   if ! command -v "$1" >/dev/null; then
     echo "[vault] Missing command: $1" >&2
@@ -49,9 +57,35 @@ require_file() {
   fi
 }
 
+# k3s CA on disk is root-only; fall back to kubeconfig CA (works for azureuser).
+prepare_k3s_ca_cert() {
+  if [[ -r "$K3S_CA_CERT" ]]; then
+    echo "$K3S_CA_CERT"
+    return 0
+  fi
+  if [[ -f "$K3S_CA_CERT" ]] && sudo test -r "$K3S_CA_CERT" 2>/dev/null; then
+    TMP_CA="$(mktemp)"
+    sudo cat "$K3S_CA_CERT" >"$TMP_CA"
+    echo "$TMP_CA"
+    return 0
+  fi
+  TMP_CA="$(mktemp)"
+  if ! kubectl config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d >"$TMP_CA"; then
+    echo "[vault] Failed to extract k3s CA from kubeconfig" >&2
+    exit 1
+  fi
+  if [[ ! -s "$TMP_CA" ]]; then
+    echo "[vault] k3s CA cert from kubeconfig is empty" >&2
+    exit 1
+  fi
+  echo "[vault] Using k3s CA from kubeconfig (${K3S_CA_CERT} not readable)" >&2
+  echo "$TMP_CA"
+}
+
 echo "[vault] Preflight..."
 require_cmd vault
 require_cmd kubectl
+require_cmd base64
 require_file "$POLICY_FILE"
 require_file "$RBAC_FILE"
 
@@ -71,7 +105,7 @@ if vault status -format=json | grep -q '"sealed":true'; then
   exit 1
 fi
 
-require_file "$K3S_CA_CERT"
+K3S_CA_USE="$(prepare_k3s_ca_cert)"
 
 echo "[vault] Apply Kubernetes token reviewer RBAC..."
 kubectl apply -f "$RBAC_FILE"
@@ -96,7 +130,7 @@ echo "[vault] Configure kubernetes auth (k3s API ${K8S_API_HOST})..."
 vault write auth/kubernetes/config \
   token_reviewer_jwt="$REVIEWER_JWT" \
   kubernetes_host="$K8S_API_HOST" \
-  kubernetes_ca_cert=@"$K3S_CA_CERT"
+  kubernetes_ca_cert=@"$K3S_CA_USE"
 
 echo "[vault] Write policy ${VAULT_POLICY}..."
 vault policy write "$VAULT_POLICY" "$POLICY_FILE"
