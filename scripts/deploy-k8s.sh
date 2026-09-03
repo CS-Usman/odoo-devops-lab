@@ -9,6 +9,9 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="${REPO_DIR}/.env"
 CHART="${REPO_DIR}/helm/odoo"
 
+export VAULT_ADDR="${VAULT_ADDR:-https://127.0.0.1:8200}"
+export VAULT_CACERT="${VAULT_CACERT:-/opt/vault/tls/tls.crt}"
+
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 
 if ! command -v helm >/dev/null; then
@@ -30,11 +33,11 @@ wait_eso_secret() {
   local deadline=$((SECONDS + 180))
   echo "[k8s] Wait for ExternalSecret ${name}..."
   until kubectl -n odoo get secret "$name" >/dev/null 2>&1 \
-    && kubectl -n odoo get externalsecret "$name" -o jsonpath='{.status.conditions[0].status}' 2>/dev/null | grep -q True; do
+    && kubectl -n odoo get externalsecret "$name" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q True; do
     if (( SECONDS >= deadline )); then
       echo "[k8s] Timed out waiting for ExternalSecret ${name}" >&2
-      echo "[k8s] Run ./scripts/install-external-secrets.sh on the VM first." >&2
-      kubectl -n odoo get externalsecret "$name" -o yaml >&2 || true
+      echo "[k8s] Run: ./scripts/vault-seed-secrets.sh && ./scripts/install-external-secrets.sh" >&2
+      kubectl -n odoo describe externalsecret "$name" 2>&1 | tail -15 >&2 || true
       return 1
     fi
     sleep 5
@@ -45,6 +48,12 @@ echo "[k8s] Namespace..."
 kubectl create namespace odoo --dry-run=client -o yaml | kubectl apply -f -
 
 echo "[k8s] Vault-backed secrets (External Secrets Operator)..."
+if vault status >/dev/null 2>&1 && ! vault status -format=json 2>/dev/null | grep -q '"sealed":true'; then
+  echo "[k8s] Ensure staging keys in Vault (DB_HOST, POSTGRES_DB)..."
+  vault kv patch secret/odoo/staging \
+    DB_HOST=postgres-staging \
+    POSTGRES_DB=odoo_staging 2>/dev/null || true
+fi
 for sec in odoo-db odoo-staging-db postgres-staging; do
   wait_eso_secret "$sec"
 done
