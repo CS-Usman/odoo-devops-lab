@@ -39,6 +39,16 @@ helm upgrade --install "$ESO_RELEASE" external-secrets/external-secrets \
 echo "[eso] Wait for ESO controller..."
 kubectl -n "$ESO_NAMESPACE" rollout status "deployment/${ESO_RELEASE}" --timeout=300s
 
+echo "[eso] Wait for External Secrets CRDs..."
+deadline=$((SECONDS + 120))
+until kubectl get crd clustersecretstores.external-secrets.io externalsecrets.external-secrets.io >/dev/null 2>&1; do
+  if (( SECONDS >= deadline )); then
+    echo "[eso] Timed out waiting for External Secrets CRDs" >&2
+    exit 1
+  fi
+  sleep 2
+done
+
 echo "[eso] Publish Vault CA to ${ESO_NAMESPACE} namespace..."
 kubectl create namespace "$ESO_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n "$ESO_NAMESPACE" create configmap vault-ca \
