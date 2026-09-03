@@ -83,4 +83,4 @@ done
 echo "[eso] Ready."
 kubectl -n odoo get externalsecret,secret | grep -E 'odoo-db|odoo-staging-db|postgres-staging|NAME' || true
 echo ""
-echo "Next: remove kubectl create secret blocks from deploy-k8s.sh once CI deploy verified."
+echo "Next: CI deploy uses deploy-k8s.sh (expects ESO secrets ready)."

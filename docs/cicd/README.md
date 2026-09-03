@@ -75,5 +75,5 @@ ansible-playbook -i ansible/inventory ansible/bootstrap.yml
 ## What CI/CD does *not* do
 
 - `terraform apply`
-- VM `.env` secrets
+- Vault bootstrap — [vault](../vault/README.md) (one-time on VM)
 - Backups — [backup](../backup/README.md)

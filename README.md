@@ -12,6 +12,7 @@ Personal lab for learning DevOps with Odoo 17 — Docker locally, Azure for prod
 | Database | Azure PostgreSQL Flexible Server v16 (private) |
 | CI/CD | pre-commit, Gitleaks, Trivy, GHCR, SSH deploy, smoke test |
 | Backups | `pg_dump` + filestore → Azure Blob (weekly cron) |
+| Secrets | HashiCorp Vault + External Secrets → k8s |
 | Bootstrap | Ansible playbook + cloud-init template |
 
 **Live URLs:** `http://<VM_IP>/` (prod) · `http://<VM_IP>:8080/` (staging)
@@ -63,6 +64,6 @@ pre-commit install    # optional — see docs/cicd/README.md
 | 4 | Terraform + Ansible bootstrap + runbook | Done |
 | 4b | Blob backups + cron | Done |
 | 5 | k3s + Helm (prod + staging) | Done — [docs/k3s/README.md](docs/k3s/README.md) |
-| 6 | Vault + secrets | — |
+| 6 | Vault + External Secrets | Done — [docs/vault/README.md](docs/vault/README.md) |
 | 7 | Prometheus, Grafana, Loki, alerts | — |
 | 8 | Argo CD, GitOps, restore drill | Partial (Blob backups done) |

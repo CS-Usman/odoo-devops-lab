@@ -10,6 +10,7 @@ Lab notes by phase. Each folder is a short overview + steps.
 | 4 | Nginx reverse proxy | [nginx/README.md](nginx/README.md) |
 | 4b | Backups — DB + filestore → Blob | [backup/README.md](backup/README.md) |
 | 5 | k3s + Helm (prod + staging) | [k3s/README.md](k3s/README.md) |
+| 6 | Vault + External Secrets | [vault/README.md](vault/README.md) |
 
 **Ops**
 

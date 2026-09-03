@@ -18,9 +18,6 @@ fi
 
 "${SCRIPT_DIR}/disable-traefik.sh"
 
-STAGING_USER="${STAGING_DB_USER:-odoo}"
-STAGING_PASSWORD="${STAGING_DB_PASSWORD:-odoo-staging-change-me}"
-
 if [[ -f "$ENV_FILE" ]]; then
   set -a
   # shellcheck source=/dev/null
@@ -28,35 +25,33 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-: "${DB_HOST:?Set DB_HOST in .env}"
-: "${DB_USER:?Set DB_USER in .env}"
-: "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
+wait_eso_secret() {
+  local name=$1
+  local deadline=$((SECONDS + 180))
+  echo "[k8s] Wait for ExternalSecret ${name}..."
+  until kubectl -n odoo get secret "$name" >/dev/null 2>&1 \
+    && kubectl -n odoo get externalsecret "$name" -o jsonpath='{.status.conditions[0].status}' 2>/dev/null | grep -q True; do
+    if (( SECONDS >= deadline )); then
+      echo "[k8s] Timed out waiting for ExternalSecret ${name}" >&2
+      echo "[k8s] Run ./scripts/install-external-secrets.sh on the VM first." >&2
+      kubectl -n odoo get externalsecret "$name" -o yaml >&2 || true
+      return 1
+    fi
+    sleep 5
+  done
+}
 
 echo "[k8s] Namespace..."
 kubectl create namespace odoo --dry-run=client -o yaml | kubectl apply -f -
 
+echo "[k8s] Vault-backed secrets (External Secrets Operator)..."
+for sec in odoo-db odoo-staging-db postgres-staging; do
+  wait_eso_secret "$sec"
+done
+
 echo "[k8s] Staging Postgres (on VM, not Azure)..."
-kubectl -n odoo create secret generic postgres-staging \
-  --from-literal=POSTGRES_USER="$STAGING_USER" \
-  --from-literal=POSTGRES_PASSWORD="$STAGING_PASSWORD" \
-  --from-literal=POSTGRES_DB=odoo_staging \
-  --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f "${REPO_DIR}/k8s/postgres-staging.yaml"
 kubectl -n odoo wait --for=condition=Available deployment/postgres-staging --timeout=180s
-
-echo "[k8s] Prod DB secret (Azure Postgres)..."
-kubectl -n odoo create secret generic odoo-db \
-  --from-literal=DB_HOST="$DB_HOST" \
-  --from-literal=DB_USER="$DB_USER" \
-  --from-literal=DB_PASSWORD="$DB_PASSWORD" \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-echo "[k8s] Staging Odoo DB secret (VM postgres)..."
-kubectl -n odoo create secret generic odoo-staging-db \
-  --from-literal=DB_HOST=postgres-staging \
-  --from-literal=DB_USER="$STAGING_USER" \
-  --from-literal=DB_PASSWORD="$STAGING_PASSWORD" \
-  --dry-run=client -o yaml | kubectl apply -f -
 
 if [[ -n "${GHCR_TOKEN:-}" ]]; then
   kubectl -n odoo create secret docker-registry ghcr-pull \
