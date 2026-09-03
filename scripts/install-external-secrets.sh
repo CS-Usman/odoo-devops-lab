@@ -9,6 +9,9 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 ESO_DIR="${REPO_DIR}/k8s/external-secrets"
 VAULT_CA="${VAULT_CA:-/opt/vault/tls/tls.crt}"
 
+ESO_NAMESPACE="${ESO_NAMESPACE:-external-secrets}"
+ESO_RELEASE="${ESO_RELEASE:-external-secrets}"
+
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 
 if ! command -v helm >/dev/null; then
@@ -27,18 +30,18 @@ VAULT_SERVER="${VAULT_SERVER:-https://${NODE_IP}:8200}"
 echo "[eso] Install External Secrets Operator..."
 helm repo add external-secrets https://charts.external-secrets.io >/dev/null 2>&1 || true
 helm repo update external-secrets
-helm upgrade --install external-secrets external-secrets/external-secrets \
-  -n external-secrets \
+helm upgrade --install "$ESO_RELEASE" external-secrets/external-secrets \
+  -n "$ESO_NAMESPACE" \
   --create-namespace \
   --wait \
   --timeout 10m
 
 echo "[eso] Wait for ESO controller..."
-kubectl -n external-secrets wait --for=condition=Available deployment/external-secrets --timeout=300s
+kubectl -n "$ESO_NAMESPACE" rollout status "deployment/${ESO_RELEASE}" --timeout=300s
 
-echo "[eso] Publish Vault CA to external-secrets namespace..."
-kubectl create namespace external-secrets --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n external-secrets create configmap vault-ca \
+echo "[eso] Publish Vault CA to ${ESO_NAMESPACE} namespace..."
+kubectl create namespace "$ESO_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n "$ESO_NAMESPACE" create configmap vault-ca \
   --from-file=ca.crt="$VAULT_CA" \
   --dry-run=client -o yaml | kubectl apply -f -
 
@@ -57,11 +60,11 @@ kubectl apply -f "${ESO_DIR}/externalsecret-postgres-staging.yaml"
 echo "[eso] Wait for synced secrets (up to 2 minutes)..."
 deadline=$((SECONDS + 120))
 until kubectl -n odoo get secret odoo-db odoo-staging-db postgres-staging >/dev/null 2>&1 \
-  && [[ "$(kubectl -n odoo get externalsecret odoo-db -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" == "True" ]]; do
+  && kubectl -n odoo get externalsecret odoo-db -o jsonpath='{.status.conditions[0].status}' 2>/dev/null | grep -q True; do
   if (( SECONDS >= deadline )); then
     echo "[eso] Timed out waiting for ExternalSecrets — debug:" >&2
     kubectl -n odoo get externalsecret >&2 || true
-    kubectl -n external-secrets logs deployment/external-secrets --tail=40 >&2 || true
+    kubectl -n "$ESO_NAMESPACE" logs "deployment/${ESO_RELEASE}" --tail=40 >&2 || true
     exit 1
   fi
   sleep 5
