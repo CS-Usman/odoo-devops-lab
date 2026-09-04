@@ -1,6 +1,6 @@
 # Phase 7 — Monitoring
 
-**Status:** Sessions A–C done · Session D (alerts) in repo.
+**Status: Done.** Prometheus, Grafana, Loki, Promtail, blackbox probes, and Alertmanager run on the VM (8 GB `Standard_B2ms` recommended).
 
 ## Architecture
 
@@ -37,16 +37,24 @@ kubectl -n monitoring create configmap grafana-dashboard-odoo-lab \
 kubectl -n monitoring label configmap grafana-dashboard-odoo-lab grafana_dashboard=1 --overwrite
 ```
 
-## Access Grafana (SSH tunnel from laptop)
+## Access Grafana
+
+Login: `admin` / `odoo-lab-change-me` (override with `GRAFANA_ADMIN_PASSWORD` on install).
+
+**SSH tunnel (recommended for lab)** — from your laptop:
 
 ```bash
 ssh -i ~/.ssh/azure_vm_key -L 3000:127.0.0.1:3000 azureuser@<VM_IP> \
   'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80'
 ```
 
-Open **http://127.0.0.1:3000** — login `admin` / `odoo-lab-change-me`.
+Open **http://127.0.0.1:3000**. Keep the terminal open.
 
-Public (if NSG allows **30300**): `http://<VM_IP>:30300`
+**NodePort (optional, no SSH)** — Grafana is exposed on port **30300** (`helm/monitoring/values.yaml`). NSG rule in `terraform/main.tf`:
+
+`http://<VM_IP>:30300`
+
+If port-forward fails with “address already in use” on the VM, use a different local port or run `pkill -f 'port-forward.*9090'` (same pattern for Prometheus `9090` / Alertmanager `9093`).
 
 ## Session B — Odoo DevOps Lab dashboard
 
@@ -149,6 +157,8 @@ kubectl -n monitoring port-forward svc/monitoring-alertmanager 9093:9093
 
 Lab default uses a **null receiver** (no email/Slack). Alerts still show in Prometheus and Alertmanager UIs.
 
+**Noise on `/alerts`:** kube-prometheus ships many default Kubernetes rules. On single-node k3s, ignore **Watchdog** (always firing — heartbeat) and **KubeProxyDown** (false positive). Focus on the **odoo-lab.*** rule group.
+
 ### Add email notifications (optional)
 
 Edit `helm/monitoring/values.yaml` under `alertmanager.config`:
@@ -181,7 +191,7 @@ kubectl -n odoo scale deployment odoo-prod --replicas=1
 | Path | Purpose |
 |------|---------|
 | `helm/monitoring/values.yaml` | Stack limits, Grafana datasources (Prometheus + Loki) |
-| `helm/monitoring/loki-values.yaml` | Loki Monolithic, 72h retention |
+| `helm/monitoring/loki-values.yaml` | Loki SingleBinary, 72h retention |
 | `helm/monitoring/promtail-values.yaml` | Pod logs + Nginx host logs |
 | `helm/monitoring/dashboards/odoo-lab-overview.json` | Session B dashboard |
 | `helm/monitoring/blackbox-values.yaml` | Odoo health probes |
@@ -195,5 +205,16 @@ kubectl -n odoo scale deployment odoo-prod --replicas=1
 | A | Prometheus + Grafana core | Done |
 | B | Odoo DevOps Lab dashboard | Done |
 | C | Loki + Promtail logs | Done |
-| D | Alertmanager rules | Done (deploy on VM) |
-| E | Nginx access + mark Phase 7 done | — |
+| D | Alertmanager rules | Done |
+| E | Docs + Grafana access notes | Done |
+
+## VM sizing
+
+Monitoring + Odoo + Vault on one node needs **≥ 8 GB RAM** (`Standard_B2ms`). A 4 GB VM runs out of memory (k3s API timeouts, OOM).
+
+## Known follow-ups (optional)
+
+- Blackbox Odoo probes: Odoo responds with HTTP/1.0 — probes may show `probe_success=0`; CI smoke test is the source of truth until fixed.
+- Odoo alert rules use `env=` labels; metrics expose `target=` — align labels if health alerts should fire from Prometheus.
+- Trim default kube-prometheus alert rules to reduce UI noise.
+- Add email/Slack receiver in `alertmanager.config` when needed.

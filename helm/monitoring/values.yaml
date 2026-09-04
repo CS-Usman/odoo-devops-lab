@@ -32,14 +32,14 @@ alertmanager:
       group_wait: 30s
       group_interval: 5m
       repeat_interval: 12h
-      receiver: null
+      receiver: "null"
       routes:
         - matchers:
             - severity = critical
-          receiver: null
+          receiver: "null"
           repeat_interval: 1h
     receivers:
-      - name: null
+      - name: "null"
 
 grafana:
   enabled: true

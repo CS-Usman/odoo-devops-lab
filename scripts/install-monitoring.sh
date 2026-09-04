@@ -152,4 +152,4 @@ echo "  Prometheus:    kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MON
 echo "                 → http://127.0.0.1:9090/alerts"
 echo "  Alertmanager:  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-alertmanager 9093:9093"
 echo "                 → http://127.0.0.1:9093"
-echo "Next: Session E — Grafana access + mark Phase 7 done."
+echo "Next: Phase 8 — Argo CD / GitOps, restore drill."

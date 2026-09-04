@@ -13,6 +13,7 @@ Personal lab for learning DevOps with Odoo 17 — Docker locally, Azure for prod
 | CI/CD | pre-commit, Gitleaks, Trivy, GHCR, SSH deploy, smoke test |
 | Backups | `pg_dump` + filestore → Azure Blob (weekly cron) |
 | Secrets | HashiCorp Vault + External Secrets → k8s |
+| Monitoring | Prometheus, Grafana, Loki, Alertmanager on k3s |
 | Bootstrap | Ansible playbook + cloud-init template |
 
 **Live URLs:** `http://<VM_IP>/` (prod) · `http://<VM_IP>:8080/` (staging)
@@ -29,6 +30,8 @@ Start at **[docs/README.md](docs/README.md)**.
 | Nginx | [docs/nginx/README.md](docs/nginx/README.md) |
 | Backups | [docs/backup/README.md](docs/backup/README.md) |
 | k3s (prod + staging) | [docs/k3s/README.md](docs/k3s/README.md) |
+| Vault + External Secrets | [docs/vault/README.md](docs/vault/README.md) |
+| Monitoring | [docs/monitoring/README.md](docs/monitoring/README.md) |
 | IP change | [docs/IP-CHANGE.md](docs/IP-CHANGE.md) |
 | Runbook | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
 
@@ -65,5 +68,5 @@ pre-commit install    # optional — see docs/cicd/README.md
 | 4b | Blob backups + cron | Done |
 | 5 | k3s + Helm (prod + staging) | Done — [docs/k3s/README.md](docs/k3s/README.md) |
 | 6 | Vault + External Secrets | Done — [docs/vault/README.md](docs/vault/README.md) |
-| 7 | Prometheus, Grafana, Loki, alerts | In progress — [docs/monitoring/README.md](docs/monitoring/README.md) |
+| 7 | Prometheus, Grafana, Loki, alerts | Done — [docs/monitoring/README.md](docs/monitoring/README.md) |
 | 8 | Argo CD, GitOps, restore drill | Partial (Blob backups done) |
