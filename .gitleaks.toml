@@ -1,0 +1,12 @@
+# Gitleaks config for odoo-devops-lab.
+# CI uses gitleaks-action; pre-commit uses the same file via --config.
+
+title = "odoo-devops-lab gitleaks"
+
+[allowlist]
+description = "Known false positives — kubectl wait conditions, not secrets"
+regexTarget = "line"
+regexes = [
+  '''kubectl\s+-n\s+\S+\s+wait\s+--for=condition=Available''',
+  '''--for=condition=Available''',
+]
