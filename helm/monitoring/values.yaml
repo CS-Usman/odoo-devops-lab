@@ -58,15 +58,15 @@ grafana:
       cpu: 300m
       memory: 512Mi
   readinessProbe:
-    initialDelaySeconds: 90
-    timeoutSeconds: 10
-    periodSeconds: 15
-    failureThreshold: 10
+    initialDelaySeconds: 120
+    timeoutSeconds: 15
+    periodSeconds: 20
+    failureThreshold: 15
   livenessProbe:
-    initialDelaySeconds: 180
-    timeoutSeconds: 10
+    initialDelaySeconds: 300
+    timeoutSeconds: 15
     periodSeconds: 30
-    failureThreshold: 5
+    failureThreshold: 6
   service:
     type: NodePort
     nodePort: 30300

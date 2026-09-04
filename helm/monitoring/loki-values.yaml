@@ -1,7 +1,8 @@
-# Loki — Monolithic mode, filesystem storage, sized for 4 GB Azure VM lab.
+# Loki — SingleBinary mode, filesystem storage, sized for 4 GB Azure VM lab.
 # Session C: log aggregation for Grafana Explore.
+# Chart 7.x valid modes: SingleBinary | SimpleScalable | Distributed (not "Monolithic").
 
-deploymentMode: Monolithic
+deploymentMode: SingleBinary
 
 loki:
   auth_enabled: false
@@ -23,6 +24,8 @@ loki:
     max_streams_per_user: 2000
   compactor:
     retention_enabled: true
+    delete_request_store: filesystem
+    working_directory: /var/loki/compactor
 
 minio:
   enabled: false
@@ -71,6 +74,12 @@ bloomCompactor:
   replicas: 0
 bloomGateway:
   replicas: 0
+
+gateway:
+  enabled: false
+
+canary:
+  enabled: false
 
 test:
   enabled: false
