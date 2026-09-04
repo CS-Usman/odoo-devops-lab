@@ -20,11 +20,14 @@ grafana:
   adminPassword: odoo-lab-change-me
   persistence:
     enabled: false
-  # Lighter startup on 4 GB VM — skip bundled dashboards (add in Session B).
+  # Skip heavy bundled dashboards; load odoo-lab-overview via sidecar ConfigMap.
   defaultDashboardsEnabled: false
   sidecar:
     dashboards:
-      enabled: false
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: monitoring
     datasources:
       enabled: false
   # Provision Prometheus without the sidecar container (saves RAM vs sidecar.datasources).

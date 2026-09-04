@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install Prometheus + Grafana (kube-prometheus-stack) for Phase 7 Session A.
+# Install Prometheus + Grafana (kube-prometheus-stack) for Phase 7.
 # Run on VM after k3s is up: ./scripts/install-monitoring.sh
 
 set -euo pipefail
@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 VALUES_FILE="${REPO_DIR}/helm/monitoring/values.yaml"
 BLACKBOX_VALUES="${REPO_DIR}/helm/monitoring/blackbox-values.yaml"
+DASHBOARD_JSON="${REPO_DIR}/helm/monitoring/dashboards/odoo-lab-overview.json"
 
 MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
 MONITORING_RELEASE="${MONITORING_RELEASE:-monitoring}"
@@ -67,6 +68,15 @@ if [[ -f "$BLACKBOX_VALUES" ]]; then
     --timeout 5m
 fi
 
+if [[ -f "$DASHBOARD_JSON" ]]; then
+  echo "[monitoring] Apply Odoo DevOps Lab Grafana dashboard..."
+  kubectl -n "$MONITORING_NAMESPACE" create configmap grafana-dashboard-odoo-lab \
+    --from-file=odoo-lab-overview.json="$DASHBOARD_JSON" \
+    --dry-run=client -o yaml | kubectl apply -f -
+  kubectl -n "$MONITORING_NAMESPACE" label configmap grafana-dashboard-odoo-lab \
+    grafana_dashboard=1 --overwrite
+fi
+
 NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
 PUBLIC_IP="$(curl -sf --max-time 5 ifconfig.me 2>/dev/null || true)"
 
@@ -89,4 +99,5 @@ echo ""
 echo "Prometheus UI (cluster only):"
 echo "  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-prometheus 9090:9090"
 echo ""
-echo "Next: Session B — Odoo dashboards; Session C — Loki logs."
+echo "Dashboard: Grafana → Dashboards → Odoo DevOps Lab"
+echo "Next: Session C — Loki logs; Session D — alerts."

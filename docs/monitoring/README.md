@@ -1,118 +1,85 @@
-# Phase 7 — Monitoring (Session A: Prometheus + Grafana)
+# Phase 7 — Monitoring
 
-**Status: Session A in progress.** Core metrics stack in k3s namespace `monitoring`.
+**Status:** Session A done · Session B (Odoo dashboard) in repo.
 
-## Architecture (Session A)
+## Architecture
 
 ```text
 k3s namespace: monitoring
-├── Prometheus          scrapes metrics, 3-day retention
+├── Prometheus          metrics store (3-day retention)
 ├── Grafana             dashboards (NodePort :30300)
 ├── node-exporter       VM CPU/RAM/disk
-├── kube-state-metrics  pod/deployment status
-└── blackbox-exporter   probes Odoo /devops/health
+├── kube-state-metrics  pod status
+└── blackbox-exporter   Odoo /devops/health probes
 ```
 
-Odoo pods still expose `/devops/health` and `/devops/metrics` — Grafana complements the in-app `devops_server_monitor` dashboard.
-
-## Install (VM, one-time)
+## Install / upgrade (VM)
 
 ```bash
-cd ~/odoo-devops-lab
-git pull
+cd ~/odoo-devops-lab && git pull
 chmod +x scripts/install-monitoring.sh
 ./scripts/install-monitoring.sh
 ```
 
-Optional: set a custom Grafana password before install:
+Or after pulling Session B changes only:
 
 ```bash
-GRAFANA_ADMIN_PASSWORD='your-password' ./scripts/install-monitoring.sh
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+helm upgrade monitoring prometheus-community/kube-prometheus-stack \
+  -n monitoring -f helm/monitoring/values.yaml \
+  --set grafana.adminPassword=odoo-lab-change-me --wait --timeout 10m
+kubectl -n monitoring create configmap grafana-dashboard-odoo-lab \
+  --from-file=odoo-lab-overview.json=helm/monitoring/dashboards/odoo-lab-overview.json \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n monitoring label configmap grafana-dashboard-odoo-lab grafana_dashboard=1 --overwrite
 ```
 
-## Access Grafana
-
-Grafana uses NodePort **30300**. Azure NSG must allow inbound **30300** (see `terraform/main.tf` rule `allow-grafana`) or use an SSH tunnel.
-
-| Method | URL |
-|--------|-----|
-| Public (after `terraform apply`) | `http://<VM_PUBLIC_IP>:30300` |
-| SSH tunnel (works immediately) | See below |
-
-**SSH tunnel from your laptop** (works even before NSG is open):
+## Access Grafana (SSH tunnel from laptop)
 
 ```bash
 ssh -i ~/.ssh/azure_vm_key -L 3000:127.0.0.1:3000 azureuser@<VM_IP> \
   'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80'
 ```
 
-Open **http://127.0.0.1:3000** in Firefox (keep the SSH window open).
+Open **http://127.0.0.1:3000** — login `admin` / `odoo-lab-change-me`.
 
-> Do **not** use `-L 30300:127.0.0.1:30300` alone — NodePort only works when the Grafana pod is Ready. Port-forward goes through the service directly.
+Public (if NSG allows **30300**): `http://<VM_IP>:30300`
 
-Default login: `admin` / `odoo-lab-change-me` (or your `GRAFANA_ADMIN_PASSWORD`).
+## Session B — Odoo DevOps Lab dashboard
 
-### Add Prometheus data source (if import says "No data sources found")
+Auto-loaded from git (no grafana.com import):
 
-**Quick fix in UI:** Connections → **Data sources** → **Add data source** → **Prometheus**
+**Dashboards → Odoo DevOps Lab**
 
-| Field | Value |
+| Panel | Metric |
 |-------|--------|
-| Name | `Prometheus` |
-| URL | `http://monitoring-prometheus.monitoring.svc:9090` |
-| Access | Server (default) |
+| Odoo /devops/health | `probe_success` (prod + staging) |
+| VM CPU / Memory / Disk | node-exporter |
+| Odoo pods ready | `kube_pod_container_status_ready{namespace="odoo"}` |
 
-Click **Save & test** — should show green "Successfully queried".
+Manual upload (alternative): **Import → Upload JSON** → `helm/monitoring/dashboards/odoo-lab-overview.json`
 
-Then re-import dashboard **15760** and pick **Prometheus** for `DS_PROMETHEUS`.
+## Prometheus datasource
 
-**Permanent fix:** pull latest repo and helm upgrade (values now provision Prometheus datasource).
+Provisioned in `helm/monitoring/values.yaml`. If missing:
 
-## Import dashboards (no grafana.com needed)
-
-Import by **ID** calls grafana.com from the VM — often fails with "network error" in a lab.
-
-**Use upload instead:**
-
-1. **Dashboards** → **New** → **Import**
-2. **Upload dashboard JSON file**
-3. Pick `helm/monitoring/dashboards/odoo-lab-overview.json` from the repo
-   (on VM: `~/odoo-devops-lab/helm/monitoring/dashboards/odoo-lab-overview.json`)
-4. Select data source **Prometheus** → **Import**
-
-Panels: Odoo health probes, VM CPU/RAM, odoo namespace pods.
-
-## What to check first
-
-1. **Grafana → Dashboards → Kubernetes / Compute Resources / Node** — host CPU and memory.
-2. **Grafana → Explore → Prometheus** — query `up` — targets should be `1`.
-3. **Prometheus targets** — `odoo-health` probe for prod and staging.
-
-Prometheus UI (not public by default):
-
-```bash
-kubectl -n monitoring port-forward svc/monitoring-prometheus 9090:9090
-# http://127.0.0.1:9090/targets
-```
+**Connections → Data sources → Prometheus** → URL `http://monitoring-prometheus.monitoring.svc:9090`
 
 ## Files
 
 | Path | Purpose |
 |------|---------|
-| `helm/monitoring/values.yaml` | kube-prometheus-stack limits, retention, NodePort |
-| `helm/monitoring/blackbox-values.yaml` | Odoo `/devops/health` probes |
-| `scripts/install-monitoring.sh` | Helm install (Prometheus + Grafana + blackbox) |
-
-## RAM note (4 GB VM)
-
-Monitoring is capped (~512 Mi Prometheus, ~256 Mi Grafana). If the node OOMs, raise limits in `values.yaml` or disable blackbox.
+| `helm/monitoring/values.yaml` | Stack limits, Grafana datasource, dashboard sidecar |
+| `helm/monitoring/dashboards/odoo-lab-overview.json` | Session B dashboard |
+| `helm/monitoring/blackbox-values.yaml` | Odoo health probes |
+| `scripts/install-monitoring.sh` | Full install |
 
 ## Sessions roadmap
 
 | Session | Topic | Status |
 |---------|--------|--------|
-| A | Prometheus + Grafana core | This doc |
-| B | Odoo dashboards | — |
+| A | Prometheus + Grafana core | Done |
+| B | Odoo DevOps Lab dashboard | Done |
 | C | Loki + Promtail logs | — |
 | D | Alertmanager rules | — |
 | E | Nginx access + mark Phase 7 done | — |
