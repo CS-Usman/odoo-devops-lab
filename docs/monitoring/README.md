@@ -32,10 +32,23 @@ GRAFANA_ADMIN_PASSWORD='your-password' ./scripts/install-monitoring.sh
 
 ## Access Grafana
 
+Grafana uses NodePort **30300**. Azure NSG must allow inbound **30300** (see `terraform/main.tf` rule `allow-grafana`) or use an SSH tunnel.
+
 | Method | URL |
 |--------|-----|
-| On VM | `http://127.0.0.1:30300` |
-| From laptop | `http://<VM_PUBLIC_IP>:30300` (add NSG inbound rule for port **30300** if blocked) |
+| Public (after `terraform apply`) | `http://<VM_PUBLIC_IP>:30300` |
+| SSH tunnel (works immediately) | See below |
+
+**SSH tunnel from your laptop** (works even before NSG is open):
+
+```bash
+ssh -i ~/.ssh/azure_vm_key -L 3000:127.0.0.1:3000 azureuser@<VM_IP> \
+  'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80'
+```
+
+Open **http://127.0.0.1:3000** in Firefox (keep the SSH window open).
+
+> Do **not** use `-L 30300:127.0.0.1:30300` alone — NodePort only works when the Grafana pod is Ready. Port-forward goes through the service directly.
 
 Default login: `admin` / `odoo-lab-change-me` (or your `GRAFANA_ADMIN_PASSWORD`).
 
@@ -48,7 +61,7 @@ Default login: `admin` / `odoo-lab-change-me` (or your `GRAFANA_ADMIN_PASSWORD`)
 Prometheus UI (not public by default):
 
 ```bash
-kubectl -n monitoring port-forward svc/prometheus-monitoring-prometheus 9090:9090
+kubectl -n monitoring port-forward svc/monitoring-prometheus 9090:9090
 # http://127.0.0.1:9090/targets
 ```
 

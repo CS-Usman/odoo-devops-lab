@@ -20,22 +20,33 @@ grafana:
   adminPassword: odoo-lab-change-me
   persistence:
     enabled: false
+  # Lighter startup on 4 GB VM — skip bundled dashboards (add in Session B).
+  defaultDashboardsEnabled: false
+  sidecar:
+    dashboards:
+      enabled: false
+    datasources:
+      enabled: false
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
       memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+  readinessProbe:
+    initialDelaySeconds: 90
+    timeoutSeconds: 10
+    periodSeconds: 15
+    failureThreshold: 10
+  livenessProbe:
+    initialDelaySeconds: 180
+    timeoutSeconds: 10
+    periodSeconds: 30
+    failureThreshold: 5
   service:
     type: NodePort
     nodePort: 30300
-  defaultDashboardsEnabled: true
-  sidecar:
-    dashboards:
-      enabled: true
-    datasources:
-      enabled: true
 
 prometheus:
   enabled: true
@@ -53,10 +64,10 @@ prometheus:
     resources:
       requests:
         cpu: 100m
-        memory: 256Mi
+        memory: 200Mi
       limits:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 400m
+        memory: 384Mi
 
 prometheusOperator:
   resources:
