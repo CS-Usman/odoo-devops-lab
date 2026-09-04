@@ -43,6 +43,13 @@ grafana:
           isDefault: true
           jsonData:
             timeInterval: 60s
+        - name: Loki
+          type: loki
+          uid: loki
+          url: http://loki.monitoring.svc.cluster.local:3100
+          access: proxy
+          jsonData:
+            maxLines: 1000
   resources:
     requests:
       cpu: 50m

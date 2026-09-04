@@ -8,11 +8,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 VALUES_FILE="${REPO_DIR}/helm/monitoring/values.yaml"
 BLACKBOX_VALUES="${REPO_DIR}/helm/monitoring/blackbox-values.yaml"
+LOKI_VALUES="${REPO_DIR}/helm/monitoring/loki-values.yaml"
+PROMTAIL_VALUES="${REPO_DIR}/helm/monitoring/promtail-values.yaml"
 DASHBOARD_JSON="${REPO_DIR}/helm/monitoring/dashboards/odoo-lab-overview.json"
 
 MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
 MONITORING_RELEASE="${MONITORING_RELEASE:-monitoring}"
 BLACKBOX_RELEASE="${BLACKBOX_RELEASE:-blackbox}"
+LOKI_RELEASE="${LOKI_RELEASE:-loki}"
+PROMTAIL_RELEASE="${PROMTAIL_RELEASE:-promtail}"
 GRAFANA_NODE_PORT="${GRAFANA_NODE_PORT:-30300}"
 GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-odoo-lab-change-me}"
 
@@ -30,7 +34,8 @@ fi
 
 echo "[monitoring] Add prometheus-community Helm repo..."
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null 2>&1 || true
-helm repo update prometheus-community
+helm repo add grafana https://grafana.github.io/helm-charts >/dev/null 2>&1 || true
+helm repo update prometheus-community grafana
 
 echo "[monitoring] Install kube-prometheus-stack (release=${MONITORING_RELEASE})..."
 helm upgrade --install "$MONITORING_RELEASE" prometheus-community/kube-prometheus-stack \
@@ -77,6 +82,35 @@ if [[ -f "$DASHBOARD_JSON" ]]; then
     grafana_dashboard=1 --overwrite
 fi
 
+if [[ -f "$LOKI_VALUES" ]]; then
+  echo "[monitoring] Install Loki (logs)..."
+  helm upgrade --install "$LOKI_RELEASE" grafana/loki \
+    -n "$MONITORING_NAMESPACE" \
+    -f "$LOKI_VALUES" \
+    --wait \
+    --timeout 10m
+  kubectl -n "$MONITORING_NAMESPACE" rollout status "statefulset/${LOKI_RELEASE}" --timeout=300s 2>/dev/null \
+    || kubectl -n "$MONITORING_NAMESPACE" rollout status "deployment/${LOKI_RELEASE}" --timeout=300s
+fi
+
+if [[ -f "$PROMTAIL_VALUES" ]]; then
+  echo "[monitoring] Install Promtail (log shipper)..."
+  helm upgrade --install "$PROMTAIL_RELEASE" grafana/promtail \
+    -n "$MONITORING_NAMESPACE" \
+    -f "$PROMTAIL_VALUES" \
+    --wait \
+    --timeout 10m
+  kubectl -n "$MONITORING_NAMESPACE" rollout status "daemonset/${PROMTAIL_RELEASE}" --timeout=300s
+fi
+
+echo "[monitoring] Refresh Grafana datasources (Prometheus + Loki)..."
+helm upgrade "$MONITORING_RELEASE" prometheus-community/kube-prometheus-stack \
+  -n "$MONITORING_NAMESPACE" \
+  -f "$VALUES_FILE" \
+  --set "grafana.adminPassword=${GRAFANA_ADMIN_PASSWORD}" \
+  --wait \
+  --timeout 10m
+
 NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
 PUBLIC_IP="$(curl -sf --max-time 5 ifconfig.me 2>/dev/null || true)"
 
@@ -100,4 +134,5 @@ echo "Prometheus UI (cluster only):"
 echo "  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-prometheus 9090:9090"
 echo ""
 echo "Dashboard: Grafana → Dashboards → Odoo DevOps Lab"
-echo "Next: Session C — Loki logs; Session D — alerts."
+echo "Logs:      Grafana → Explore → Loki → {namespace=\"odoo\"}"
+echo "Next: Session D — Alertmanager rules."

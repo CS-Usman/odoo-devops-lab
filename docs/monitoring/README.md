@@ -1,13 +1,15 @@
 # Phase 7 — Monitoring
 
-**Status:** Session A done · Session B (Odoo dashboard) in repo.
+**Status:** Sessions A–B done · Session C (Loki logs) in repo.
 
 ## Architecture
 
 ```text
 k3s namespace: monitoring
-├── Prometheus          metrics store (3-day retention)
-├── Grafana             dashboards (NodePort :30300)
+├── Prometheus          metrics (3-day retention)
+├── Grafana             dashboards + Explore
+├── Loki                logs (72h retention)
+├── Promtail            k8s pod logs + /var/log/nginx
 ├── node-exporter       VM CPU/RAM/disk
 ├── kube-state-metrics  pod status
 └── blackbox-exporter   Odoo /devops/health probes
@@ -65,11 +67,49 @@ Provisioned in `helm/monitoring/values.yaml`. If missing:
 
 **Connections → Data sources → Prometheus** → URL `http://monitoring-prometheus.monitoring.svc:9090`
 
+## Session C — Loki logs
+
+After `./scripts/install-monitoring.sh` (or manual Loki/Promtail helm installs):
+
+1. **Explore** → data source **Loki**
+2. Query examples:
+
+```logql
+{namespace="odoo"}
+```
+
+```logql
+{namespace="odoo", pod=~"odoo-prod.*"}
+```
+
+```logql
+{job="nginx"}
+```
+
+| Source | Label |
+|--------|--------|
+| Odoo / postgres pods | `{namespace="odoo"}` |
+| Host Nginx | `{job="nginx"}` |
+
+Manual install (after git pull):
+
+```bash
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update grafana
+helm upgrade --install loki grafana/loki -n monitoring -f helm/monitoring/loki-values.yaml --wait --timeout 10m
+helm upgrade --install promtail grafana/promtail -n monitoring -f helm/monitoring/promtail-values.yaml --wait --timeout 10m
+helm upgrade monitoring prometheus-community/kube-prometheus-stack -n monitoring \
+  -f helm/monitoring/values.yaml --set grafana.adminPassword=odoo-lab-change-me --wait --timeout 10m
+```
+
 ## Files
 
 | Path | Purpose |
 |------|---------|
-| `helm/monitoring/values.yaml` | Stack limits, Grafana datasource, dashboard sidecar |
+| `helm/monitoring/values.yaml` | Stack limits, Grafana datasources (Prometheus + Loki) |
+| `helm/monitoring/loki-values.yaml` | Loki Monolithic, 72h retention |
+| `helm/monitoring/promtail-values.yaml` | Pod logs + Nginx host logs |
 | `helm/monitoring/dashboards/odoo-lab-overview.json` | Session B dashboard |
 | `helm/monitoring/blackbox-values.yaml` | Odoo health probes |
 | `scripts/install-monitoring.sh` | Full install |
@@ -80,6 +120,6 @@ Provisioned in `helm/monitoring/values.yaml`. If missing:
 |---------|--------|--------|
 | A | Prometheus + Grafana core | Done |
 | B | Odoo DevOps Lab dashboard | Done |
-| C | Loki + Promtail logs | — |
+| C | Loki + Promtail logs | Done (deploy on VM) |
 | D | Alertmanager rules | — |
 | E | Nginx access + mark Phase 7 done | — |

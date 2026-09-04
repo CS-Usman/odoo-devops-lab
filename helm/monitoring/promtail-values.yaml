@@ -1,0 +1,34 @@
+# Promtail — ship k8s pod logs + host Nginx logs to Loki.
+# Session C.
+
+config:
+  logLevel: info
+  clients:
+    - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+  snippets:
+    extraScrapeConfigs: |
+      - job_name: nginx-host
+        static_configs:
+          - targets: [localhost]
+            labels:
+              job: nginx
+              __path__: /var/log/nginx/*.log
+
+extraVolumes:
+  - name: nginx-logs
+    hostPath:
+      path: /var/log/nginx
+      type: DirectoryOrCreate
+
+extraVolumeMounts:
+  - name: nginx-logs
+    mountPath: /var/log/nginx
+    readOnly: true
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 150m
+    memory: 128Mi
