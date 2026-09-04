@@ -56,9 +56,9 @@ kubectl -n monitoring port-forward svc/prometheus-monitoring-prometheus 9090:909
 
 | Path | Purpose |
 |------|---------|
-| `helm/monitoring/values.yaml` | Resource limits, retention, NodePort |
-| `scripts/install-monitoring.sh` | Helm install + Odoo health probes |
-| `k8s/monitoring/probe-odoo-health.yaml` | Blackbox scrape of `/devops/health` |
+| `helm/monitoring/values.yaml` | kube-prometheus-stack limits, retention, NodePort |
+| `helm/monitoring/blackbox-values.yaml` | Odoo `/devops/health` probes |
+| `scripts/install-monitoring.sh` | Helm install (Prometheus + Grafana + blackbox) |
 
 ## RAM note (4 GB VM)
 

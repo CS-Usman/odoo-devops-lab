@@ -87,16 +87,6 @@ nodeExporter:
       cpu: 200m
       memory: 64Mi
 
-blackboxExporter:
-  enabled: true
-  resources:
-    requests:
-      cpu: 25m
-      memory: 32Mi
-    limits:
-      cpu: 100m
-      memory: 64Mi
-
 # k3s runs control plane on the node; these components are not exposed as pods.
 kubeEtcd:
   enabled: false

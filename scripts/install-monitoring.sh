@@ -7,10 +7,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 VALUES_FILE="${REPO_DIR}/helm/monitoring/values.yaml"
-MONITORING_DIR="${REPO_DIR}/k8s/monitoring"
+BLACKBOX_VALUES="${REPO_DIR}/helm/monitoring/blackbox-values.yaml"
 
 MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
 MONITORING_RELEASE="${MONITORING_RELEASE:-monitoring}"
+BLACKBOX_RELEASE="${BLACKBOX_RELEASE:-blackbox}"
 GRAFANA_NODE_PORT="${GRAFANA_NODE_PORT:-30300}"
 GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-odoo-lab-change-me}"
 
@@ -42,7 +43,7 @@ helm upgrade --install "$MONITORING_RELEASE" prometheus-community/kube-prometheu
 echo "[monitoring] Wait for core workloads..."
 kubectl -n "$MONITORING_NAMESPACE" rollout status "deployment/${MONITORING_RELEASE}-operator" --timeout=300s
 kubectl -n "$MONITORING_NAMESPACE" rollout status "deployment/${MONITORING_RELEASE}-grafana" --timeout=300s
-kubectl -n "$MONITORING_NAMESPACE" rollout status "daemonset/${MONITORING_RELEASE}-node-exporter" --timeout=300s
+kubectl -n "$MONITORING_NAMESPACE" rollout status "daemonset/${MONITORING_RELEASE}-prometheus-node-exporter" --timeout=300s
 
 echo "[monitoring] Wait for Prometheus CR..."
 deadline=$((SECONDS + 180))
@@ -57,8 +58,14 @@ done
 kubectl -n "$MONITORING_NAMESPACE" wait --for=condition=Ready \
   "prometheus/${MONITORING_RELEASE}-prometheus" --timeout=300s
 
-echo "[monitoring] Apply Odoo health probes..."
-kubectl apply -f "${MONITORING_DIR}/probe-odoo-health.yaml"
+if [[ -f "$BLACKBOX_VALUES" ]]; then
+  echo "[monitoring] Install blackbox-exporter (Odoo health probes)..."
+  helm upgrade --install "$BLACKBOX_RELEASE" prometheus-community/prometheus-blackbox-exporter \
+    -n "$MONITORING_NAMESPACE" \
+    -f "$BLACKBOX_VALUES" \
+    --wait \
+    --timeout 5m
+fi
 
 NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
 PUBLIC_IP="$(curl -sf --max-time 5 ifconfig.me 2>/dev/null || true)"

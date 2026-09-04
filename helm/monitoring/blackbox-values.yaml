@@ -1,0 +1,28 @@
+# prometheus-blackbox-exporter — separate chart (not part of kube-prometheus-stack).
+# Probes Odoo /devops/health via ServiceMonitors discovered by Prometheus.
+serviceMonitor:
+  enabled: true
+  defaults:
+    labels:
+      release: monitoring
+    interval: 60s
+    scrapeTimeout: 30s
+  targets:
+    - name: odoo-prod-health
+      url: http://odoo-prod.odoo.svc.cluster.local:8069/devops/health
+      labels:
+        app: odoo
+        env: prod
+    - name: odoo-staging-health
+      url: http://odoo-staging.odoo.svc.cluster.local:8069/devops/health
+      labels:
+        app: odoo
+        env: staging
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi
