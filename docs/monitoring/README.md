@@ -1,6 +1,6 @@
 # Phase 7 — Monitoring
 
-**Status:** Sessions A–B done · Session C (Loki logs) in repo.
+**Status:** Sessions A–C done · Session D (alerts) in repo.
 
 ## Architecture
 
@@ -12,7 +12,8 @@ k3s namespace: monitoring
 ├── Promtail            k8s pod logs + /var/log/nginx
 ├── node-exporter       VM CPU/RAM/disk
 ├── kube-state-metrics  pod status
-└── blackbox-exporter   Odoo /devops/health probes
+├── blackbox-exporter   Odoo /devops/health probes
+└── Alertmanager        routes alerts (null receiver in lab)
 ```
 
 ## Install / upgrade (VM)
@@ -103,6 +104,78 @@ helm upgrade monitoring prometheus-community/kube-prometheus-stack -n monitoring
   -f helm/monitoring/values.yaml --set grafana.adminPassword=odoo-lab-change-me --wait --timeout 10m
 ```
 
+## Session D — Alerts
+
+Rules live in `helm/monitoring/prometheus-rules-odoo-lab.yaml`:
+
+| Alert | Severity | When |
+|-------|----------|------|
+| OdooProdDown | critical | `/devops/health` probe fails 2m |
+| OdooStagingDown | critical | staging health probe fails 2m |
+| OdooProdPodNotReady | critical | prod pod not ready 5m |
+| NodeMemoryLow | warning | &lt; 15% RAM free 5m |
+| NodeDiskSpaceLow | warning | &lt; 15% disk on `/` 10m |
+| OdooPodCrashLooping | warning | &gt; 3 restarts in 15m |
+| PrometheusTargetDown | warning | scrape target down 5m |
+
+### Install / upgrade alerts (VM)
+
+```bash
+cd ~/odoo-devops-lab && git pull
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+helm upgrade monitoring prometheus-community/kube-prometheus-stack \
+  -n monitoring -f helm/monitoring/values.yaml \
+  --set grafana.adminPassword=odoo-lab-change-me --wait --timeout 10m
+kubectl apply -f helm/monitoring/prometheus-rules-odoo-lab.yaml
+```
+
+Or run the full script: `./scripts/install-monitoring.sh`
+
+### View fired alerts
+
+**Prometheus** (rule status Pending / Firing):
+
+```bash
+kubectl -n monitoring port-forward svc/monitoring-prometheus 9090:9090
+# http://127.0.0.1:9090/alerts
+```
+
+**Alertmanager** (grouped notifications):
+
+```bash
+kubectl -n monitoring port-forward svc/monitoring-alertmanager 9093:9093
+# http://127.0.0.1:9093
+```
+
+Lab default uses a **null receiver** (no email/Slack). Alerts still show in Prometheus and Alertmanager UIs.
+
+### Add email notifications (optional)
+
+Edit `helm/monitoring/values.yaml` under `alertmanager.config`:
+
+```yaml
+receivers:
+  - name: email
+    email_configs:
+      - to: you@example.com
+        from: alerts@yourdomain.com
+        smarthost: smtp.example.com:587
+        auth_username: you@example.com
+        auth_password: secret
+route:
+  receiver: email
+```
+
+Then `helm upgrade monitoring ...` again.
+
+### Test an alert
+
+```bash
+kubectl -n odoo scale deployment odoo-prod --replicas=0
+# Wait ~2m → OdooProdDown fires in Prometheus / Alertmanager
+kubectl -n odoo scale deployment odoo-prod --replicas=1
+```
+
 ## Files
 
 | Path | Purpose |
@@ -112,6 +185,7 @@ helm upgrade monitoring prometheus-community/kube-prometheus-stack -n monitoring
 | `helm/monitoring/promtail-values.yaml` | Pod logs + Nginx host logs |
 | `helm/monitoring/dashboards/odoo-lab-overview.json` | Session B dashboard |
 | `helm/monitoring/blackbox-values.yaml` | Odoo health probes |
+| `helm/monitoring/prometheus-rules-odoo-lab.yaml` | Session D alert rules |
 | `scripts/install-monitoring.sh` | Full install |
 
 ## Sessions roadmap
@@ -120,6 +194,6 @@ helm upgrade monitoring prometheus-community/kube-prometheus-stack -n monitoring
 |---------|--------|--------|
 | A | Prometheus + Grafana core | Done |
 | B | Odoo DevOps Lab dashboard | Done |
-| C | Loki + Promtail logs | Done (deploy on VM) |
-| D | Alertmanager rules | — |
+| C | Loki + Promtail logs | Done |
+| D | Alertmanager rules | Done (deploy on VM) |
 | E | Nginx access + mark Phase 7 done | — |

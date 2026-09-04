@@ -1,0 +1,86 @@
+# Session D — Prometheus alerting rules for odoo-devops-lab.
+# Discovered by Prometheus (ruleSelectorNilUsesHelmValues: false in values.yaml).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: odoo-lab-alerts
+  namespace: monitoring
+  labels:
+    app: odoo-devops-lab
+spec:
+  groups:
+    - name: odoo-lab.critical
+      interval: 60s
+      rules:
+        - alert: OdooProdDown
+          expr: probe_success{env="prod"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Odoo prod health check failing
+            description: Blackbox probe to prod /devops/health has been down for 2 minutes.
+
+        - alert: OdooStagingDown
+          expr: probe_success{env="staging"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Odoo staging health check failing
+            description: Blackbox probe to staging /devops/health has been down for 2 minutes.
+
+        - alert: OdooProdPodNotReady
+          expr: |
+            kube_pod_container_status_ready{namespace="odoo", pod=~"odoo-prod.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Odoo prod pod not ready
+            description: odoo-prod container has not been ready for 5 minutes.
+
+    - name: odoo-lab.warning
+      interval: 60s
+      rules:
+        - alert: NodeMemoryLow
+          expr: |
+            (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.15
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: VM memory running low
+            description: Less than 15% memory available on the node for 5 minutes.
+
+        - alert: NodeDiskSpaceLow
+          expr: |
+            (
+              node_filesystem_avail_bytes{mountpoint="/", fstype=~"ext4|xfs"}
+              / node_filesystem_size_bytes{mountpoint="/", fstype=~"ext4|xfs"}
+            ) < 0.15
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: VM root disk running low
+            description: Less than 15% free space on / for 10 minutes.
+
+        - alert: OdooPodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="odoo"}[15m]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Odoo pod restarting frequently
+            description: A pod in namespace odoo restarted more than 3 times in 15 minutes.
+
+        - alert: PrometheusTargetDown
+          expr: up{job=~".*(odoo|blackbox|node-exporter|kube-state).*"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Prometheus scrape target down
+            description: Target {{ $labels.job }} (instance {{ $labels.instance }}) is unreachable.

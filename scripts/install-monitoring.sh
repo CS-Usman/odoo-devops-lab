@@ -10,6 +10,7 @@ VALUES_FILE="${REPO_DIR}/helm/monitoring/values.yaml"
 BLACKBOX_VALUES="${REPO_DIR}/helm/monitoring/blackbox-values.yaml"
 LOKI_VALUES="${REPO_DIR}/helm/monitoring/loki-values.yaml"
 PROMTAIL_VALUES="${REPO_DIR}/helm/monitoring/promtail-values.yaml"
+PROMETHEUS_RULES="${REPO_DIR}/helm/monitoring/prometheus-rules-odoo-lab.yaml"
 DASHBOARD_JSON="${REPO_DIR}/helm/monitoring/dashboards/odoo-lab-overview.json"
 
 MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
@@ -63,6 +64,16 @@ done
 
 kubectl -n "$MONITORING_NAMESPACE" wait --for=condition=Ready \
   "prometheus/${MONITORING_RELEASE}-prometheus" --timeout=300s
+
+if kubectl -n "$MONITORING_NAMESPACE" get alertmanager "${MONITORING_RELEASE}-alertmanager" >/dev/null 2>&1; then
+  kubectl -n "$MONITORING_NAMESPACE" wait --for=condition=Ready \
+    "alertmanager/${MONITORING_RELEASE}-alertmanager" --timeout=300s
+fi
+
+if [[ -f "$PROMETHEUS_RULES" ]]; then
+  echo "[monitoring] Apply Odoo lab alert rules (Session D)..."
+  kubectl apply -f "$PROMETHEUS_RULES"
+fi
 
 if [[ -f "$BLACKBOX_VALUES" ]]; then
   echo "[monitoring] Install blackbox-exporter (Odoo health probes)..."
@@ -135,4 +146,10 @@ echo "  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE
 echo ""
 echo "Dashboard: Grafana → Dashboards → Odoo DevOps Lab"
 echo "Logs:      Grafana → Explore → Loki → {namespace=\"odoo\"}"
-echo "Next: Session D — Alertmanager rules."
+echo ""
+echo "Alerts (Session D):"
+echo "  Prometheus:    kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-prometheus 9090:9090"
+echo "                 → http://127.0.0.1:9090/alerts"
+echo "  Alertmanager:  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-alertmanager 9093:9093"
+echo "                 → http://127.0.0.1:9093"
+echo "Next: Session E — Grafana access + mark Phase 7 done."
