@@ -17,9 +17,9 @@ variable "vm_name" {
 }
 
 variable "vm_size" {
-  description = "VM size (B2s = 4 GB — needed for k3s; B1s = 1 GB compose only)"
+  description = "VM size (B2ms = 8 GB for k3s + Odoo + Vault + monitoring; B2s = 4 GB minimum)"
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_B2ms"
 }
 
 variable "admin_username" {
