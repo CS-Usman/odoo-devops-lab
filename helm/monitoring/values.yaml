@@ -27,6 +27,19 @@ grafana:
       enabled: false
     datasources:
       enabled: false
+  # Provision Prometheus without the sidecar container (saves RAM vs sidecar.datasources).
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          uid: prometheus
+          url: http://monitoring-prometheus.monitoring.svc:9090
+          access: proxy
+          isDefault: true
+          jsonData:
+            timeInterval: 60s
   resources:
     requests:
       cpu: 50m

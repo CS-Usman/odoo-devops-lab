@@ -52,6 +52,36 @@ Open **http://127.0.0.1:3000** in Firefox (keep the SSH window open).
 
 Default login: `admin` / `odoo-lab-change-me` (or your `GRAFANA_ADMIN_PASSWORD`).
 
+### Add Prometheus data source (if import says "No data sources found")
+
+**Quick fix in UI:** Connections → **Data sources** → **Add data source** → **Prometheus**
+
+| Field | Value |
+|-------|--------|
+| Name | `Prometheus` |
+| URL | `http://monitoring-prometheus.monitoring.svc:9090` |
+| Access | Server (default) |
+
+Click **Save & test** — should show green "Successfully queried".
+
+Then re-import dashboard **15760** and pick **Prometheus** for `DS_PROMETHEUS`.
+
+**Permanent fix:** pull latest repo and helm upgrade (values now provision Prometheus datasource).
+
+## Import dashboards (no grafana.com needed)
+
+Import by **ID** calls grafana.com from the VM — often fails with "network error" in a lab.
+
+**Use upload instead:**
+
+1. **Dashboards** → **New** → **Import**
+2. **Upload dashboard JSON file**
+3. Pick `helm/monitoring/dashboards/odoo-lab-overview.json` from the repo
+   (on VM: `~/odoo-devops-lab/helm/monitoring/dashboards/odoo-lab-overview.json`)
+4. Select data source **Prometheus** → **Import**
+
+Panels: Odoo health probes, VM CPU/RAM, odoo namespace pods.
+
 ## What to check first
 
 1. **Grafana → Dashboards → Kubernetes / Compute Resources / Node** — host CPU and memory.
