@@ -1,0 +1,106 @@
+# kube-prometheus-stack — tuned for odoo-devops-lab (k3s on 4 GB Azure VM).
+# Session A: Prometheus + Grafana + node/kube metrics + Odoo health probes.
+# Loki and Alertmanager come in later sessions.
+
+fullnameOverride: monitoring
+
+defaultRules:
+  create: true
+  rules:
+    alertmanager: false
+    etcd: false
+    kubeScheduler: false
+    kubeControllerManager: false
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+  adminPassword: odoo-lab-change-me
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: NodePort
+    nodePort: 30300
+  defaultDashboardsEnabled: true
+  sidecar:
+    dashboards:
+      enabled: true
+    datasources:
+      enabled: true
+
+prometheus:
+  enabled: true
+  prometheusSpec:
+    retention: 3d
+    retentionSize: 1GB
+    walCompression: true
+    scrapeInterval: 60s
+    evaluationInterval: 60s
+    # Discover ServiceMonitors / Probes cluster-wide (not only Helm-owned).
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+kubeStateMetrics:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi
+
+blackboxExporter:
+  enabled: true
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+# k3s runs control plane on the node; these components are not exposed as pods.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false

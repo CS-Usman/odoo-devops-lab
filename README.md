@@ -65,5 +65,5 @@ pre-commit install    # optional — see docs/cicd/README.md
 | 4b | Blob backups + cron | Done |
 | 5 | k3s + Helm (prod + staging) | Done — [docs/k3s/README.md](docs/k3s/README.md) |
 | 6 | Vault + External Secrets | Done — [docs/vault/README.md](docs/vault/README.md) |
-| 7 | Prometheus, Grafana, Loki, alerts | — |
+| 7 | Prometheus, Grafana, Loki, alerts | In progress — [docs/monitoring/README.md](docs/monitoring/README.md) |
 | 8 | Argo CD, GitOps, restore drill | Partial (Blob backups done) |

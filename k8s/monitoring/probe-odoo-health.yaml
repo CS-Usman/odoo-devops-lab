@@ -1,0 +1,22 @@
+# Blackbox probes for Odoo /devops/health (prod + staging ClusterIP services).
+# Requires kube-prometheus-stack with blackboxExporter.enabled=true.
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: odoo-health
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  jobName: odoo-health
+  interval: 60s
+  module: http_2xx
+  prober:
+    url: monitoring-blackbox-exporter.monitoring.svc:9115
+  targets:
+    staticConfig:
+      static:
+        - http://odoo-prod.odoo.svc.cluster.local:8069/devops/health
+        - http://odoo-staging.odoo.svc.cluster.local:8069/devops/health
+      labels:
+        app: odoo

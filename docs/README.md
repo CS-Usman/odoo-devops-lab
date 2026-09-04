@@ -11,6 +11,7 @@ Lab notes by phase. Each folder is a short overview + steps.
 | 4b | Backups — DB + filestore → Blob | [backup/README.md](backup/README.md) |
 | 5 | k3s + Helm (prod + staging) | [k3s/README.md](k3s/README.md) |
 | 6 | Vault + External Secrets | [vault/README.md](vault/README.md) |
+| 7 | Monitoring — Prometheus, Grafana | [monitoring/README.md](monitoring/README.md) |
 
 **Ops**
 
