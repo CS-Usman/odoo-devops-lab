@@ -1,0 +1,30 @@
+# Argo CD Application — odoo-staging (Phase 8B).
+# Manual sync first: Argo UI → Applications → odoo-staging → Sync
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: odoo-staging
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CS-Usman/odoo-devops-lab
+    targetRevision: main
+    path: helm/odoo
+    helm:
+      valueFiles:
+        - values-staging.yaml
+        - values-ghcr-pull.yaml
+      parameters:
+        - name: image.tag
+          value: latest
+        - name: dockerSocket.gid
+          value: "${DOCKER_GID}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: odoo
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
