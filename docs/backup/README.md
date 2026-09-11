@@ -22,7 +22,7 @@ odoo-backups/
 
 Blobs older than **30 days** are deleted automatically (Terraform lifecycle policy).
 
-Scripts: `scripts/backup.sh`, `scripts/restore.sh`.
+Scripts: `scripts/backup.sh`, `scripts/restore.sh`, `scripts/restore-staging.sh` (Phase 8 drill).
 
 ---
 
@@ -105,10 +105,28 @@ Runs every **Sunday 02:00 UTC**. Check: `tail /var/log/odoo-backup.log`
 
 ---
 
-## Restore
+## Restore prod (same VM / Azure DB)
 
 ```bash
 ./scripts/restore.sh YYYY-MM-DD
 ```
 
 Stops Odoo, restores DB + filestore, starts Odoo. Type `yes` to confirm.
+
+---
+
+## Phase 8 — Restore prod backup into staging (k3s)
+
+Proves Blob backups are usable without touching prod.
+
+```bash
+# 1. Backup prod (Azure Postgres + /srv/odoo/prod filestore → Blob)
+./scripts/backup.sh
+
+# 2. Restore that date into staging (postgres-staging pod + /srv/odoo/staging)
+./scripts/restore-staging.sh YYYY-MM-DD
+```
+
+Verify on **http://&lt;VM_IP&gt;:8080/** — attachments/images from prod should appear.
+
+Direct prod → staging copy (no Blob): `./scripts/seed-staging.sh`

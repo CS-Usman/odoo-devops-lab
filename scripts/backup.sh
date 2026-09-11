@@ -8,6 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="${REPO_DIR}/.env"
 COMPOSE_FILE="${REPO_DIR}/docker-compose.azure.yml"
+export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+PROD_FILESTORE_HOST="${PROD_FILESTORE_HOST:-/srv/odoo/prod/filestore}"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -37,18 +39,24 @@ sudo docker run --rm \
   "$ODOO_DB_NAME" > "${WORKDIR}/db.dump"
 
 echo "[backup] Filestore archive..."
-FILESTORE="/var/lib/odoo/filestore/${ODOO_DB_NAME}"
+FILESTORE_HOST="${PROD_FILESTORE_HOST}/${ODOO_DB_NAME}"
 
-if ! sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo test -d "${FILESTORE}"; then
-  echo "Filestore not found in Odoo container: ${FILESTORE}" >&2
-  echo "Available filestore databases:" >&2
-  sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo ls -1 /var/lib/odoo/filestore >&2 || true
+if [[ -d "$FILESTORE_HOST" ]]; then
+  echo "[backup] Using k3s hostPath: ${FILESTORE_HOST}"
+  sudo tar czf "${WORKDIR}/filestore.tar.gz" -C "${PROD_FILESTORE_HOST}" "$(basename "${FILESTORE_HOST}")"
+elif [[ -f "${COMPOSE_FILE}" ]] && sudo docker compose -f "${COMPOSE_FILE}" ps odoo 2>/dev/null | grep -q Up; then
+  FILESTORE="/var/lib/odoo/filestore/${ODOO_DB_NAME}"
+  if ! sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo test -d "${FILESTORE}"; then
+    echo "Filestore not found in Odoo container: ${FILESTORE}" >&2
+    exit 1
+  fi
+  sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo \
+    tar czf - -C /var/lib/odoo/filestore "$(basename "${FILESTORE}")" \
+    > "${WORKDIR}/filestore.tar.gz"
+else
+  echo "Filestore not found at ${FILESTORE_HOST} and compose odoo is not running." >&2
   exit 1
 fi
-
-sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo \
-  tar czf - -C /var/lib/odoo/filestore "$(basename "${FILESTORE}")" \
-  > "${WORKDIR}/filestore.tar.gz"
 
 echo "[backup] Upload to blob://${AZURE_STORAGE_CONTAINER}/${STAMP}/..."
 export AZURE_STORAGE_KEY
