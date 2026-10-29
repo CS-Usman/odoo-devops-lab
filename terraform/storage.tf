@@ -5,6 +5,7 @@ resource "azurerm_storage_account" "backups" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
   min_tls_version          = "TLS1_2"
+  is_hns_enabled           = true
   tags                     = var.tags
 
   blob_properties {
@@ -16,6 +17,18 @@ resource "azurerm_storage_account" "backups" {
 
 resource "azurerm_storage_container" "backups" {
   name                  = var.storage_container_name
+  storage_account_name  = azurerm_storage_account.backups.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_container" "odoo_prod_filestore" {
+  name                  = var.odoo_prod_filestore_container_name
+  storage_account_name  = azurerm_storage_account.backups.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_container" "odoo_staging_filestore" {
+  name                  = var.odoo_staging_filestore_container_name
   storage_account_name  = azurerm_storage_account.backups.name
   container_access_type = "private"
 }

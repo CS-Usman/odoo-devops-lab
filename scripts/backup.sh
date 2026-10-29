@@ -1,65 +1,50 @@
 #!/usr/bin/env bash
-# Upload PostgreSQL dump + Odoo filestore to Azure Blob.
-# Requires: .env with DB_* and AZURE_STORAGE_* vars, az CLI, docker (postgres:16 client).
+# Production backup: Azure Postgres pg_dump + filestore → Blob (dated + prod filestore container).
+#
+# Requires: docker, kubectl, az CLI, .env (see .env.azure.example)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
-ENV_FILE="${REPO_DIR}/.env"
-COMPOSE_FILE="${REPO_DIR}/docker-compose.azure.yml"
-export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
-PROD_FILESTORE_HOST="${PROD_FILESTORE_HOST:-/srv/odoo/prod/filestore}"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
 
-if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck source=/dev/null
-  source "$ENV_FILE"
-  set +a
-fi
+require_azure_prod_postgres
+require_azure_storage
 
-: "${DB_HOST:?Set DB_HOST in .env}"
 : "${DB_USER:?Set DB_USER in .env}"
 : "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
-: "${AZURE_STORAGE_ACCOUNT:?Set AZURE_STORAGE_ACCOUNT in .env}"
-: "${AZURE_STORAGE_KEY:?Set AZURE_STORAGE_KEY in .env}"
 
-DB_PORT="${DB_PORT:-5432}"
-AZURE_STORAGE_CONTAINER="${AZURE_STORAGE_CONTAINER:-odoo-backups}"
+NS="$(odoo_namespace)"
+WEB_DEPLOY="${ODOO_WEB_DEPLOYMENT:-odoo-prod-web}"
 ODOO_DB_NAME="${ODOO_DB_NAME:-odoo_devops_lab}"
 STAMP="$(date +%Y-%m-%d)"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
-echo "[backup] PostgreSQL dump of ${ODOO_DB_NAME} (postgres:16 client)..."
-sudo docker run --rm \
+echo "[backup] pg_dump ${ODOO_DB_NAME} @ ${POSTGRES_HOST} (Azure, not PgBouncer)..."
+docker run --rm \
   -e PGPASSWORD="$DB_PASSWORD" \
+  -e PGSSLMODE="$PGSSLMODE" \
   postgres:16 \
-  pg_dump -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" -Fc \
+  pg_dump -h "$POSTGRES_HOST" -U "$DB_USER" -p "$DB_PORT" -Fc \
   "$ODOO_DB_NAME" > "${WORKDIR}/db.dump"
 
-echo "[backup] Filestore archive..."
-FILESTORE_HOST="${PROD_FILESTORE_HOST}/${ODOO_DB_NAME}"
-
-if [[ -d "$FILESTORE_HOST" ]]; then
-  echo "[backup] Using k3s hostPath: ${FILESTORE_HOST}"
-  sudo tar czf "${WORKDIR}/filestore.tar.gz" -C "${PROD_FILESTORE_HOST}" "$(basename "${FILESTORE_HOST}")"
-elif [[ -f "${COMPOSE_FILE}" ]] && sudo docker compose -f "${COMPOSE_FILE}" ps odoo 2>/dev/null | grep -q Up; then
-  FILESTORE="/var/lib/odoo/filestore/${ODOO_DB_NAME}"
-  if ! sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo test -d "${FILESTORE}"; then
-    echo "Filestore not found in Odoo container: ${FILESTORE}" >&2
-    exit 1
-  fi
-  sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo \
-    tar czf - -C /var/lib/odoo/filestore "$(basename "${FILESTORE}")" \
-    > "${WORKDIR}/filestore.tar.gz"
-else
-  echo "Filestore not found at ${FILESTORE_HOST} and compose odoo is not running." >&2
+POD="$(kubectl -n "$NS" get pods -l app.kubernetes.io/name=odoo-prod,app.kubernetes.io/component=web \
+  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+if [[ -z "$POD" ]]; then
+  echo "[backup] No odoo-prod-web pod in ${NS}." >&2
   exit 1
 fi
 
-echo "[backup] Upload to blob://${AZURE_STORAGE_CONTAINER}/${STAMP}/..."
+echo "[backup] Filestore from pod ${POD}..."
+kubectl -n "$NS" exec "$POD" -- \
+  tar czf - -C /var/lib/odoo/filestore "${ODOO_DB_NAME}" \
+  > "${WORKDIR}/filestore.tar.gz"
+
 export AZURE_STORAGE_KEY
+echo "[backup] Upload ${STAMP}/ to ${AZURE_STORAGE_CONTAINER}..."
 az storage blob upload \
   --account-name "${AZURE_STORAGE_ACCOUNT}" \
   --container-name "${AZURE_STORAGE_CONTAINER}" \
@@ -76,5 +61,7 @@ az storage blob upload \
   --overwrite \
   --only-show-errors
 
-echo "[backup] Done: ${AZURE_STORAGE_CONTAINER}/${STAMP}/db.dump"
-echo "[backup] Done: ${AZURE_STORAGE_CONTAINER}/${STAMP}/filestore.tar.gz"
+echo "[backup] Update live prod filestore blob (${ODOO_PROD_FILESTORE_CONTAINER})..."
+"${SCRIPT_DIR}/sync-filestore-blob.sh" push prod
+
+echo "[backup] Done: ${AZURE_STORAGE_CONTAINER}/${STAMP}/"

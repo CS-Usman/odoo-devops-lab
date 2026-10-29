@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Install Prometheus + Grafana (kube-prometheus-stack) for Phase 7.
-# Run on VM after k3s is up: ./scripts/install-monitoring.sh
+# Install Prometheus + Grafana (kube-prometheus-stack) on AKS.
 
 set -euo pipefail
 
@@ -21,10 +20,10 @@ PROMTAIL_RELEASE="${PROMTAIL_RELEASE:-promtail}"
 GRAFANA_NODE_PORT="${GRAFANA_NODE_PORT:-30300}"
 GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-odoo-lab-change-me}"
 
-export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+: "${KUBECONFIG:?Set KUBECONFIG or run az aks get-credentials first}"
 
 if ! command -v helm >/dev/null; then
-  echo "[monitoring] helm not found — run ./scripts/install-k3s.sh first" >&2
+  echo "[monitoring] helm not found" >&2
   exit 1
 fi
 
@@ -129,17 +128,9 @@ echo ""
 echo "[monitoring] Ready."
 kubectl -n "$MONITORING_NAMESPACE" get pods
 echo ""
-echo "Grafana:"
-echo "  URL (NodePort): http://${NODE_IP}:${GRAFANA_NODE_PORT}"
-if [[ -n "$PUBLIC_IP" ]]; then
-  echo "  URL (public):   http://${PUBLIC_IP}:${GRAFANA_NODE_PORT}  (open NSG port ${GRAFANA_NODE_PORT} if blocked)"
-fi
-echo "  User: admin"
-echo "  Pass: ${GRAFANA_ADMIN_PASSWORD}  (override with GRAFANA_ADMIN_PASSWORD=...)"
-echo ""
-echo "  SSH tunnel (from laptop):"
-echo "    ssh -i ~/.ssh/azure_vm_key -L 3000:127.0.0.1:3000 azureuser@<VM_IP> \\"
-echo "      'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-grafana 3000:80'"
+echo "Grafana (port-forward — do not expose NodePort publicly in production):"
+echo "  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-grafana 3000:80"
+echo "  http://127.0.0.1:3000  user: admin  pass: \${GRAFANA_ADMIN_PASSWORD}"
 echo ""
 echo "Prometheus UI (cluster only):"
 echo "  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-prometheus 9090:9090"
@@ -152,4 +143,4 @@ echo "  Prometheus:    kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MON
 echo "                 → http://127.0.0.1:9090/alerts"
 echo "  Alertmanager:  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-alertmanager 9093:9093"
 echo "                 → http://127.0.0.1:9093"
-echo "Next: Phase 8 — Argo CD / GitOps, restore drill."
+echo "Next: ./scripts/install-argocd.sh for GitOps."

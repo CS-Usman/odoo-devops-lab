@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time: copy secrets from VM .env into Vault KV (secret/odoo/*).
+# One-time: copy secrets from .env into Vault KV (secret/odoo/*).
 # Run after: vault operator init/unseal + vault secrets enable -path=secret kv-v2
 
 set -euo pipefail
@@ -18,12 +18,15 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-: "${DB_HOST:?Set DB_HOST in .env}"
 : "${DB_USER:?Set DB_USER in .env}"
 : "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
 
-STAGING_USER="${STAGING_DB_USER:-odoo}"
-STAGING_PASSWORD="${STAGING_DB_PASSWORD:-odoo-staging-change-me}"
+# AKS: Odoo → PgBouncer; PgBouncer → Azure Postgres FQDN
+POSTGRES_HOST="${POSTGRES_HOST:-${DB_HOST:?Set POSTGRES_HOST or DB_HOST (Azure FQDN) in .env}}"
+DB_HOST="${DB_HOST:-pgbouncer.odoo.svc.cluster.local}"
+
+STAGING_USER="${STAGING_DB_USER:-odoo_staging}"
+STAGING_PASSWORD="${STAGING_DB_PASSWORD:-change-me-staging}"
 STAGING_DB="${ODOO_STAGING_DB_NAME:-odoo_staging}"
 
 if ! vault status >/dev/null 2>&1; then
@@ -36,15 +39,17 @@ vault secrets enable -path=secret kv-v2 2>/dev/null || true
 echo "[vault] Write secret/odoo/prod..."
 vault kv put secret/odoo/prod \
   DB_HOST="$DB_HOST" \
+  POSTGRES_HOST="$POSTGRES_HOST" \
+  POSTGRES_DB="${ODOO_DB_NAME:-odoo_devops_lab}" \
   DB_USER="$DB_USER" \
   DB_PASSWORD="$DB_PASSWORD" \
   ODOO_DB_NAME="${ODOO_DB_NAME:-odoo_devops_lab}"
 
 echo "[vault] Write secret/odoo/staging..."
 vault kv put secret/odoo/staging \
-  DB_HOST="postgres-staging" \
-  STAGING_DB_USER="$STAGING_USER" \
-  STAGING_DB_PASSWORD="$STAGING_PASSWORD" \
+  DB_HOST="${STAGING_DB_HOST:-postgres-staging.odoo.svc.cluster.local}" \
+  DB_USER="$STAGING_USER" \
+  DB_PASSWORD="$STAGING_PASSWORD" \
   POSTGRES_DB="$STAGING_DB"
 
 if [[ -n "${AZURE_STORAGE_ACCOUNT:-}" && -n "${AZURE_STORAGE_KEY:-}" ]]; then

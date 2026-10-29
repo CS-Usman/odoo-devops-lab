@@ -1,20 +1,4 @@
-# Production — http://<VM_IP>/  (Nginx :80 → hostPort 8069)
-
 fullnameOverride: odoo-prod
 
 odoo:
   dbName: odoo_devops_lab
-
-persistence:
-  hostPath: /srv/odoo/prod
-
-ingress:
-  enabled: false
-
-service:
-  hostPort: 8069
-  longpollingHostPort: 8072
-
-resources:
-  limits:
-    memory: "1408Mi"

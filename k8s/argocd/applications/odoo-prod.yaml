@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: odoo-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CS-Usman/odoo-devops-lab
+    targetRevision: main
+    path: helm/odoo
+    helm:
+      valueFiles:
+        - values-prod.yaml
+        - environments/production/values.yaml
+        - environments/production/image-tag.yaml
+        - values-ghcr-pull.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: odoo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -220,9 +220,9 @@ class DevopsMonitorCollector(models.AbstractModel):
         docker = self._collect_docker_stats_metrics()
         if docker["container_count"] > 0:
             return docker
-        k3s = self._collect_k3s_pod_metrics()
-        if k3s["container_count"] > 0:
-            return k3s
+        k8s = self._collect_kubernetes_pod_metrics()
+        if k8s["container_count"] > 0:
+            return k8s
         return docker
 
     @api.model
@@ -285,33 +285,37 @@ class DevopsMonitorCollector(models.AbstractModel):
         }
 
     @api.model
-    def _collect_k3s_pod_metrics(self):
-        """Fallback when k3s/containerd is used instead of Docker (docker ps empty)."""
-        kubeconfig = self._k3s_kubeconfig_path()
+    def _collect_kubernetes_pod_metrics(self):
+        """Fallback when kubectl top is available (AKS) and Docker stats are empty."""
+        kubeconfig = self._kubernetes_kubeconfig_path()
         if not kubeconfig:
             return {
                 "docker_available": False,
                 "container_count": 0,
                 "container_lines": [],
             }
-        namespace = os.getenv("K3S_METRICS_NAMESPACE", "odoo")
+        namespace = os.getenv("K8S_METRICS_NAMESPACE", "odoo")
         proc = None
         kubectl_env = {**os.environ, "KUBECONFIG": kubeconfig}
         try:
-            for cmd in (["k3s", "kubectl"], ["kubectl"]):
-                try:
-                    proc = subprocess.run(
-                        [*cmd, "top", "pods", "-n", namespace, "--no-headers"],
-                        capture_output=True,
-                        text=True,
-                        timeout=15,
-                        check=False,
-                        env=kubectl_env,
-                    )
-                except FileNotFoundError:
-                    continue
-                if proc.returncode == 0 and proc.stdout.strip():
-                    break
+            try:
+                proc = subprocess.run(
+                    [
+                        "kubectl",
+                        "top",
+                        "pods",
+                        "-n",
+                        namespace,
+                        "--no-headers",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                    check=False,
+                    env=kubectl_env,
+                )
+            except FileNotFoundError:
+                proc = None
         finally:
             if kubeconfig != os.getenv("KUBECONFIG"):
                 try:
@@ -340,7 +344,7 @@ class DevopsMonitorCollector(models.AbstractModel):
                     "memory_used_mb": self._parse_k8s_mem_mb(mem),
                     "memory_limit_mb": 0.0,
                     "memory_percent": 0.0,
-                    "network_io": "k3s",
+                    "network_io": "kubernetes",
                     "block_io": "",
                     "pids": 0,
                 }
@@ -352,7 +356,7 @@ class DevopsMonitorCollector(models.AbstractModel):
         }
 
     @api.model
-    def _k3s_kubeconfig_path(self):
+    def _kubernetes_kubeconfig_path(self):
         """Return kubeconfig path usable from inside the pod (not 127.0.0.1)."""
         kubeconfig = os.getenv("KUBECONFIG")
         if not kubeconfig or not os.path.isfile(kubeconfig):

@@ -132,12 +132,12 @@ curl http://localhost:8069/devops/metrics
 docker compose exec odoo ls /mnt/extra-addons
 ```
 
-## Local vs later (Azure)
+## Local vs Azure (AKS)
 
-| Now | Later on VM |
-|-----|-------------|
-| Postgres in Docker | Azure managed Postgres |
-| `docker compose build` | Pull image from GHCR |
-| localhost:8069 | http://VM_IP:8069 |
+| Local Compose | Azure lab |
+|---------------|-----------|
+| Postgres in Docker | Prod: Azure PostgreSQL; staging: Postgres on AKS |
+| `docker compose build` | GHCR image + Argo CD |
+| localhost:8069 | Ingress / App Gateway when configured |
 
 That's it for Docker. Next up: push to GitHub, then Terraform.

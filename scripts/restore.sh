@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Download a backup set from Azure Blob and restore PostgreSQL + filestore.
-# Usage: ./scripts/restore.sh 2026-08-28
-# WARNING: overwrites the current database and filestore for ODOO_DB_NAME.
+# Restore PRODUCTION from dated backup in Blob (Azure Postgres + prod pods).
+# Usage: ./scripts/restore.sh YYYY-MM-DD
+# Does not touch staging (in-cluster Postgres).
 
 set -euo pipefail
 
@@ -13,37 +13,27 @@ fi
 STAMP="$1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
-ENV_FILE="${REPO_DIR}/.env"
-COMPOSE_FILE="${REPO_DIR}/docker-compose.azure.yml"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
 
-if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck source=/dev/null
-  source "$ENV_FILE"
-  set +a
-fi
+require_azure_prod_postgres
+require_azure_storage
 
-: "${DB_HOST:?Set DB_HOST in .env}"
-: "${DB_USER:?Set DB_USER in .env}"
-: "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
-: "${AZURE_STORAGE_ACCOUNT:?Set AZURE_STORAGE_ACCOUNT in .env}"
-: "${AZURE_STORAGE_KEY:?Set AZURE_STORAGE_KEY in .env}"
+: "${DB_USER:?}"
+: "${DB_PASSWORD:?}"
 
-DB_PORT="${DB_PORT:-5432}"
-AZURE_STORAGE_CONTAINER="${AZURE_STORAGE_CONTAINER:-odoo-backups}"
+NS="$(odoo_namespace)"
+WEB_DEPLOY="${ODOO_WEB_DEPLOYMENT:-odoo-prod-web}"
+CRON_DEPLOY="${ODOO_CRON_DEPLOYMENT:-odoo-prod-cron}"
 ODOO_DB_NAME="${ODOO_DB_NAME:-odoo_devops_lab}"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
-echo "This will REPLACE database ${ODOO_DB_NAME} and its filestore."
+echo "This will REPLACE production DB ${ODOO_DB_NAME} and prod filestore."
 read -r -p "Type yes to continue: " CONFIRM
-if [[ "$CONFIRM" != "yes" ]]; then
-  echo "Aborted."
-  exit 1
-fi
+[[ "$CONFIRM" == "yes" ]] || exit 1
 
 export AZURE_STORAGE_KEY
-echo "[restore] Download ${STAMP}/..."
 az storage blob download \
   --account-name "${AZURE_STORAGE_ACCOUNT}" \
   --container-name "${AZURE_STORAGE_CONTAINER}" \
@@ -58,24 +48,37 @@ az storage blob download \
   --file "${WORKDIR}/filestore.tar.gz" \
   --only-show-errors
 
-echo "[restore] Stop Odoo..."
-sudo docker compose -f "${COMPOSE_FILE}" stop odoo
+echo "[restore] Scale prod Odoo to 0..."
+kubectl -n "$NS" scale "deployment/${WEB_DEPLOY}" --replicas=0
+kubectl -n "$NS" scale "deployment/${CRON_DEPLOY}" --replicas=0
+kubectl -n "$NS" wait --for=delete pod -l app.kubernetes.io/name=odoo-prod --timeout=300s 2>/dev/null || true
 
-echo "[restore] PostgreSQL restore (postgres:16 client)..."
-sudo docker run --rm \
+echo "[restore] pg_restore → Azure ${POSTGRES_HOST}..."
+docker run --rm -i \
   -e PGPASSWORD="$DB_PASSWORD" \
-  -v "${WORKDIR}:/backup:ro" \
+  -e PGSSLMODE="$PGSSLMODE" \
   postgres:16 \
-  pg_restore -h "$DB_HOST" -U "$DB_USER" -p "$DB_PORT" \
+  pg_restore -h "$POSTGRES_HOST" -U "$DB_USER" -p "$DB_PORT" \
   -d "${ODOO_DB_NAME}" --clean --if-exists --no-owner --role="${DB_USER}" \
-  "/backup/db.dump"
+  < "${WORKDIR}/db.dump"
 
-FILESTORE="/var/lib/odoo/filestore/${ODOO_DB_NAME}"
-sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo rm -rf "${FILESTORE}"
-sudo docker compose -f "${COMPOSE_FILE}" exec -T odoo \
-  tar xzf - -C /var/lib/odoo/filestore < "${WORKDIR}/filestore.tar.gz"
+kubectl -n "$NS" scale "deployment/${WEB_DEPLOY}" --replicas=1
+kubectl -n "$NS" rollout status "deployment/${WEB_DEPLOY}" --timeout=600s
+POD="$(kubectl -n "$NS" get pods -l app.kubernetes.io/name=odoo-prod,app.kubernetes.io/component=web \
+  -o jsonpath='{.items[0].metadata.name}')"
 
-echo "[restore] Start Odoo..."
-sudo docker compose -f "${COMPOSE_FILE}" start odoo
+echo "[restore] Filestore → pod ${POD}..."
+kubectl -n "$NS" exec "$POD" -- rm -rf "/var/lib/odoo/filestore/${ODOO_DB_NAME}"
+kubectl -n "$NS" exec "$POD" -- mkdir -p "/var/lib/odoo/filestore/${ODOO_DB_NAME}"
+tar xzf "${WORKDIR}/filestore.tar.gz" -C "${WORKDIR}"
+SRC="${WORKDIR}/${ODOO_DB_NAME}"
+[[ -d "$SRC" ]] || SRC="${WORKDIR}/$(tar tzf "${WORKDIR}/filestore.tar.gz" | head -1 | cut -d/ -f1)"
+kubectl -n "$NS" cp "${SRC}/." "${NS}/${POD}:/var/lib/odoo/filestore/${ODOO_DB_NAME}/"
 
-echo "[restore] Done. Open Odoo and verify attachments."
+kubectl -n "$NS" scale "deployment/${WEB_DEPLOY}" --replicas=2
+kubectl -n "$NS" scale "deployment/${CRON_DEPLOY}" --replicas=1
+kubectl -n "$NS" rollout status "deployment/${WEB_DEPLOY}" --timeout=600s
+kubectl -n "$NS" rollout status "deployment/${CRON_DEPLOY}" --timeout=600s
+
+"${SCRIPT_DIR}/sync-filestore-blob.sh" push prod
+echo "[restore] Done."

@@ -1,72 +1,84 @@
 # odoo-devops-lab
 
-Personal lab for learning DevOps with Odoo 17 — Docker locally, Azure for production, automated deploys, backups.
+Production-style **Odoo 17** on **Azure Kubernetes Service (AKS)** — Terraform, Helm, PgBouncer, GitOps, and observability. Includes a custom `devops_server_monitor` addon and local **Docker Compose** for development.
 
-## What's built
+## Architecture
 
-| Layer | Stack |
-|-------|--------|
-| App | Odoo 17 + `devops_server_monitor` module |
-| Local dev | Docker Compose — Postgres + Odoo |
-| Azure VM | k3s — odoo-prod + odoo-staging pods, Nginx on :80 |
-| Database | Azure PostgreSQL Flexible Server v16 (private) |
-| CI/CD | pre-commit, Gitleaks, Trivy, GHCR, SSH deploy, smoke test |
-| Backups | `pg_dump` + filestore → Azure Blob (weekly cron) |
-| Secrets | HashiCorp Vault + External Secrets → k8s |
-| Monitoring | Prometheus, Grafana, Loki, Alertmanager on k3s |
-| Bootstrap | Ansible playbook + cloud-init template |
-
-**Live URLs:** `http://<VM_IP>/` (prod) · `http://<VM_IP>:8080/` (staging)
-
-## Documentation
-
-Start at **[docs/README.md](docs/README.md)**.
-
-| Topic | Guide |
-|-------|--------|
-| Docker (local) | [docs/docker/README.md](docs/docker/README.md) |
-| Terraform (VM, Postgres, Blob) | [docs/terraform/README.md](docs/terraform/README.md) |
-| CI/CD | [docs/cicd/README.md](docs/cicd/README.md) |
-| Nginx | [docs/nginx/README.md](docs/nginx/README.md) |
-| Backups | [docs/backup/README.md](docs/backup/README.md) |
-| k3s (prod + staging) | [docs/k3s/README.md](docs/k3s/README.md) |
-| Vault + External Secrets | [docs/vault/README.md](docs/vault/README.md) |
-| Monitoring | [docs/monitoring/README.md](docs/monitoring/README.md) |
-| IP change | [docs/IP-CHANGE.md](docs/IP-CHANGE.md) |
-| Runbook | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
-
-## Repo layout
-
+```text
+Internet → Application Gateway (TLS) → Gateway API → Odoo Service
+                                                      │
+                        ┌─────────────────────────────┼─────────────────────────────┐
+                        │ AKS (2 worker VMs)          │                             │
+                        │  odoo-web (HPA 2–4)         │  odoo-cron (1)              │
+                        │  pgbouncer (2)              │                             │
+                        └──────────────┬──────────────┴──────────────┬──────────────┘
+                                       │                             │
+                              Azure Blob (filestore + backups)
+                                       │
+                              Azure PostgreSQL (prod DB only)
+                              Staging DB = Postgres on AKS PVC
 ```
-├── addons/                    # Custom Odoo modules
-├── ansible/                   # VM bootstrap playbook
-├── helm/odoo/                 # Kubernetes Helm chart
-├── k8s/                       # Traefik config for k3s
-├── scripts/                   # backup, k3s install, deploy-k8s
-├── terraform/                 # Azure VM, Postgres, Blob, cloud-init template
-├── .github/workflows/         # ci.yml + docker-build.yml
-├── docker-compose.yml         # Local dev
-├── docker-compose.azure.yml   # VM → Azure Postgres
-└── docs/
+
+| Layer | Technology |
+|-------|------------|
+| Compute | **AKS** — **2 worker VMs** (fixed pool) |
+| App | **Helm** — Odoo web + dedicated cron, rolling updates, PDB, HPA |
+| DB pool | **PgBouncer** → single Azure Postgres Flexible Server |
+| Filestore | **Azure Blob** — prod/staging containers + backup archives |
+| Staging DB | **In-cluster PostgreSQL** — refresh from prod via scripts |
+| IaC | **Terraform** — VNet, AKS, Postgres, storage |
+| CI | **GitHub Actions** — lint, Trivy, push **GHCR** (immutable SHA tags) |
+| CD | **Argo CD** — sync Helm values from git |
+| Secrets | **External Secrets** + Vault or Key Vault (optional) |
+| Local dev | **Docker Compose** — Postgres + Odoo on localhost |
+
+## Repository layout
+
+```text
+├── addons/                 # Odoo modules
+├── helm/odoo/              # Odoo chart (web + cron)
+├── helm/pgbouncer/         # Connection pooler
+├── helm/monitoring/        # kube-prometheus-stack, Loki
+├── k8s/argocd/             # Argo CD Applications
+├── k8s/storage/            # Blob filestore notes
+├── scripts/                # bootstrap, backup, staging refresh — see scripts/README.md
+├── terraform/              # Azure infrastructure
+├── docs/                   # Guides
+└── docker-compose.yml      # Local development
 ```
 
 ## Quick start (local)
 
 ```bash
 docker compose up -d --build
-pre-commit install    # optional — see docs/cicd/README.md
 # http://localhost:8069
 ```
 
-## Master plan progress
+## Deploy to Azure (from your laptop)
 
-| Phase | Topic | Status |
-|-------|--------|--------|
-| 1–2 | Azure + Docker + Nginx + remote DB | Done |
-| 3 | CI/CD (lint, Trivy, Gitleaks, smoke test) | Done |
-| 4 | Terraform + Ansible bootstrap + runbook | Done |
-| 4b | Blob backups + cron | Done |
-| 5 | k3s + Helm (prod + staging) | Done — [docs/k3s/README.md](docs/k3s/README.md) |
-| 6 | Vault + External Secrets | Done — [docs/vault/README.md](docs/vault/README.md) |
-| 7 | Prometheus, Grafana, Loki, alerts | Done — [docs/monitoring/README.md](docs/monitoring/README.md) |
-| 8 | Argo CD, GitOps, restore drill | Partial (Blob backups done) |
+**Full walkthrough:** **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** (`az login` → Terraform → kubectl → scripts).
+
+```bash
+./scripts/check-prerequisites.sh
+az login && az account set --subscription "<your-sub>"
+cd terraform && cp terraform.tfvars.example terraform.tfvars  # edit unique names
+terraform init && terraform apply
+./scripts/seed-aks-db-secret.sh && ./scripts/bootstrap-aks.sh
+```
+
+## Documentation
+
+| Topic | Guide |
+|-------|--------|
+| Overview | [docs/README.md](docs/README.md) |
+| AKS + Helm | [docs/aks/README.md](docs/aks/README.md) · [Architecture](docs/aks/ARCHITECTURE.md) |
+| Terraform | [docs/terraform/README.md](docs/terraform/README.md) |
+| CI/CD & GitOps | [docs/cicd/README.md](docs/cicd/README.md) |
+| Backups & DR | [docs/backup/README.md](docs/backup/README.md) |
+| Monitoring | [docs/monitoring/README.md](docs/monitoring/README.md) |
+| Vault / ESO | [docs/vault/README.md](docs/vault/README.md) |
+| Local Docker | [docs/docker/README.md](docs/docker/README.md) |
+
+## License
+
+Personal / portfolio project — review Azure costs before applying Terraform.

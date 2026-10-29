@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install External Secrets Operator and apply Vault-backed ExternalSecrets.
-# Run on VM after: vault-bootstrap-k8s-auth.sh + secrets in Vault (secret/odoo/*).
+# Install ESO on AKS after Vault/Kubernetes auth is configured.
 
 set -euo pipefail
 
@@ -12,10 +12,10 @@ VAULT_CA="${VAULT_CA:-/opt/vault/tls/tls.crt}"
 ESO_NAMESPACE="${ESO_NAMESPACE:-external-secrets}"
 ESO_RELEASE="${ESO_RELEASE:-external-secrets}"
 
-export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+: "${KUBECONFIG:?Set KUBECONFIG or run az aks get-credentials first}"
 
 if ! command -v helm >/dev/null; then
-  echo "[eso] helm not found — run ./scripts/install-k3s.sh first" >&2
+  echo "[eso] helm not found" >&2
   exit 1
 fi
 
@@ -65,11 +65,10 @@ kubectl create namespace odoo --dry-run=client -o yaml | kubectl apply -f -
 echo "[eso] Apply ExternalSecrets..."
 kubectl apply -f "${ESO_DIR}/externalsecret-odoo-db.yaml"
 kubectl apply -f "${ESO_DIR}/externalsecret-odoo-staging-db.yaml"
-kubectl apply -f "${ESO_DIR}/externalsecret-postgres-staging.yaml"
 
 echo "[eso] Wait for synced secrets (up to 2 minutes)..."
 deadline=$((SECONDS + 120))
-until kubectl -n odoo get secret odoo-db odoo-staging-db postgres-staging >/dev/null 2>&1 \
+until kubectl -n odoo get secret odoo-db odoo-staging-db >/dev/null 2>&1 \
   && kubectl -n odoo get externalsecret odoo-db -o jsonpath='{.status.conditions[0].status}' 2>/dev/null | grep -q True; do
   if (( SECONDS >= deadline )); then
     echo "[eso] Timed out waiting for ExternalSecrets — debug:" >&2
@@ -81,6 +80,6 @@ until kubectl -n odoo get secret odoo-db odoo-staging-db postgres-staging >/dev/
 done
 
 echo "[eso] Ready."
-kubectl -n odoo get externalsecret,secret | grep -E 'odoo-db|odoo-staging-db|postgres-staging|NAME' || true
+kubectl -n odoo get externalsecret,secret | grep -E 'odoo-db|odoo-staging-db|NAME' || true
 echo ""
-echo "Next: CI deploy uses deploy-k8s.sh (expects ESO secrets ready)."
+echo "Next: ./scripts/deploy-aks-apps.sh or Argo CD sync (expects ESO secrets ready)."

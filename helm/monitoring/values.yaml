@@ -1,4 +1,4 @@
-# kube-prometheus-stack — tuned for odoo-devops-lab (k3s on Azure VM).
+# kube-prometheus-stack — AKS (Odoo lab).
 # Session A: Prometheus + Grafana + node/kube metrics + Odoo health probes.
 # Session D: Alertmanager + prometheus-rules-odoo-lab.yaml
 
@@ -147,7 +147,7 @@ nodeExporter:
       cpu: 200m
       memory: 64Mi
 
-# k3s runs control plane on the node; these components are not exposed as pods.
+# Managed AKS control plane — these components are not exposed as pods on workers.
 kubeEtcd:
   enabled: false
 kubeControllerManager:

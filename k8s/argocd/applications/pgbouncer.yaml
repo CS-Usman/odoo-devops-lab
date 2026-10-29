@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pgbouncer
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CS-Usman/odoo-devops-lab
+    targetRevision: main
+    path: helm/pgbouncer
+    helm:
+      valueFiles:
+        - values.yaml
+      parameters:
+        - name: fullnameOverride
+          value: pgbouncer
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: odoo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

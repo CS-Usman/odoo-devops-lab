@@ -1,0 +1,22 @@
+web:
+  replicas: 2
+
+cron:
+  enabled: true
+  replicas: 1
+
+persistence:
+  # Prefer Blob Fuse CSI → odoo-prod-filestore container (see k8s/storage/README.md).
+  storageClass: managed-csi
+  accessMode: ReadWriteOnce
+  size: 32Gi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 75

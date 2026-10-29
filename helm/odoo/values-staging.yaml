@@ -1,25 +1,22 @@
-# Staging — http://<VM_IP>:8080/
-# DB: postgres-staging pod on VM (not Azure Postgres)
-# Staging uses hostPort 8080 (not Traefik — avoids custom Traefik entrypoints on k3s chart v40)
-
 fullnameOverride: odoo-staging
 
 existingSecret: odoo-staging-db
 
-database:
-  host: postgres-staging
-
 odoo:
   dbName: odoo_staging
+  dbPort: "5432"
+  dbSslMode: disable
 
-persistence:
-  hostPath: /srv/odoo/staging
+web:
+  replicas: 1
 
-ingress:
+cron:
   enabled: false
 
-service:
-  hostPort: 8080
+persistence:
+  storageClass: managed-csi
+  accessMode: ReadWriteOnce
+  size: 32Gi
 
 resources:
   limits:

@@ -1,26 +1,20 @@
-# Copy to terraform.tfvars and fill in your values:
+# Copy to terraform.tfvars (gitignored):
 #   cp terraform.tfvars.example terraform.tfvars
-#
-# terraform.tfvars is gitignored — do not commit it.
 
-location             = "eastus"
-resource_group_name  = "rg-odoo-devops-lab"
-vm_name              = "vm-odoo-lab"
-vm_size              = "Standard_B2ms"
-admin_username       = "azureuser"
+location            = "eastus"
+resource_group_name = "rg-odoo-devops-lab"
 
-# Paste: cat ~/.ssh/azure_vm_key.pub  (must be ssh-rsa — Azure rejects ed25519)
-admin_ssh_public_key = "ssh-rsa AAAA... your-key ..."
+aks_cluster_name   = "aks-odoo-devops-lab"
+aks_node_vm_size   = "Standard_D4s_v5"
+# Fixed 2-VM node pool (no scale-out beyond 2 workers)
+aks_node_min_count = 2
+aks_node_max_count = 2
 
-# Safer: only your IP can SSH. Find IP: curl -s ifconfig.me
-# allowed_ssh_cidr = "1.2.3.4/32"
+postgres_server_name           = "psql-odoo-devops-lab-UNIQUE"
+postgres_admin_login           = "odooadmin"
+postgres_admin_password        = "CHANGE-ME-strong-password"
+postgres_database_name = "odoo_devops_lab"
+postgres_sku_name              = "GP_Standard_D2s_v3"
+postgres_ha_enabled              = false
 
-# Step 2 — Azure PostgreSQL (private, same VNet as VM)
-postgres_server_name      = "psql-odoo-devops-lab"
-postgres_admin_login      = "odooadmin"
-postgres_admin_password   = "admin"
-postgres_database_name    = "odoo_devops_lab"
-postgres_sku_name         = "B_Standard_B1ms"
-
-# Step 4 — Azure Blob backups (globally unique name)
-storage_account_name = "stodoodevopslab"
+storage_account_name = "stodoodevopslabUNIQUE"

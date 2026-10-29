@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -33,27 +33,9 @@ jobs:
         with:
           images: ghcr.io/cs-usman/odoo-devops-lab
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=,format=long
 
       - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          load: true
-          tags: ghcr.io/cs-usman/odoo-devops-lab:latest
-          push: false
-
-      - name: Trivy scan (before push)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ghcr.io/cs-usman/odoo-devops-lab:latest
-          format: table
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: 1
-
-      - name: Push to GHCR
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -61,7 +43,16 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  deploy:
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/cs-usman/odoo-devops-lab:${{ github.sha }}
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
+  gitops:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -69,29 +60,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Deploy to Azure VM (k3s)
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          IMAGE_TAG: ${{ github.sha }}
         with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
-          envs: GHCR_TOKEN,IMAGE_TAG
-          command_timeout: 20m
-          script: |
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-            cd ~/odoo-devops-lab
-            git pull origin main
-            chmod +x scripts/*.sh
-            # deploy-k8s waits for http://127.0.0.1/devops/health before SSH exits
-            ./scripts/deploy-k8s.sh
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Smoke test
-        env:
-          VM_HOST: ${{ secrets.VM_HOST }}
+      - name: Update production image tag (GitOps)
         run: |
-          chmod +x scripts/smoke-test.sh
-          ./scripts/smoke-test.sh
+          FILE=helm/odoo/environments/production/image-tag.yaml
+          sed -i "s/tag:.*/tag: \"${GITHUB_SHA}\"/" "$FILE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git diff --staged --quiet && exit 0
+          git commit -m "gitops(prod): bump Odoo image to ${GITHUB_SHA}"
+          git push

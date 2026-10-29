@@ -1,39 +1,52 @@
-# Default values — override with values-prod.yaml or values-staging.yaml
-
 nameOverride: odoo
 fullnameOverride: ""
 
 image:
   repository: ghcr.io/cs-usman/odoo-devops-lab
   tag: latest
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 imagePullSecrets: []
-  # - name: ghcr-pull
 
-# Create with: kubectl create secret generic odoo-db --from-literal=...
 existingSecret: odoo-db
 
 database:
-  host: ""   # empty = DB_HOST from secret (Azure Postgres for prod)
+  host: ""
 
 odoo:
   dbPort: "5432"
   proxyMode: "true"
   dbName: odoo_devops_lab
+  dbSslMode: require
+
+web:
+  enabled: true
+  replicas: 2
+  workers: 2
+  maxCronThreads: 0
+
+cron:
+  enabled: true
+  replicas: 1
+  workers: 0
+  maxCronThreads: 1
 
 persistence:
   enabled: true
-  hostPath: /srv/odoo/data
+  storageClass: managed-csi
+  accessMode: ReadWriteMany
+  size: 32Gi
+  existingClaim: ""
 
-dockerSocket:
+podDisruptionBudget:
   enabled: true
-  gid: null   # host `getent group docker` GID — set automatically by deploy-k8s.sh
+  minAvailable: 1
 
-# k3s pods run in containerd (docker ps is empty) — use kubectl top as fallback
-k3sMetrics:
-  enabled: true
-  namespace: odoo
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 75
 
 resources:
   requests:
@@ -43,14 +56,15 @@ resources:
     memory: "1536Mi"
     cpu: "1000m"
 
-ingress:
-  enabled: true
-  className: traefik
-  entryPoint: web
-  port: 80
-
 service:
   port: 8069
   longpollingPort: 8072
-  hostPort: null
-  longpollingHostPort: null
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 101
+  allowPrivilegeEscalation: false
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: false

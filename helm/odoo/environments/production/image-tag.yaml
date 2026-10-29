@@ -1,0 +1,3 @@
+# Updated by GitHub Actions on each main build (GitOps).
+image:
+  tag: "replace-me-on-first-deploy"

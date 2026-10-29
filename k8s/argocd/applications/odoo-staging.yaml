@@ -17,11 +17,7 @@ spec:
       valueFiles:
         - values-staging.yaml
         - values-ghcr-pull.yaml
-      parameters:
-        - name: image.tag
-          value: latest
-        - name: dockerSocket.gid
-          value: "${DOCKER_GID}"
+        - environments/production/image-tag.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo

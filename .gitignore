@@ -69,7 +69,5 @@ htmlcov/
 
 # Ansible
 *.retry
-ansible/inventory
-
 # Local notes (optional — remove this line if you want to commit personal scratch notes)
 # scratch/

@@ -1,23 +1,19 @@
-# Docs
+# Documentation
 
-Lab notes by phase. Each folder is a short overview + steps.
+**New Azure subscription? Start here:** [GETTING-STARTED.md](GETTING-STARTED.md)
 
-| Phase | Topic | Guide |
-|-------|--------|--------|
-| 1 | Docker (local) | [docker/README.md](docker/README.md) |
-| 2 | Terraform — VM, Postgres, Blob | [terraform/README.md](terraform/README.md) |
-| 3 | CI/CD — lint, Trivy, deploy, smoke test | [cicd/README.md](cicd/README.md) |
-| 4 | Nginx reverse proxy | [nginx/README.md](nginx/README.md) |
-| 4b | Backups — DB + filestore → Blob | [backup/README.md](backup/README.md) |
-| 5 | k3s + Helm (prod + staging) | [k3s/README.md](k3s/README.md) |
-| 6 | Vault + External Secrets | [vault/README.md](vault/README.md) |
-| 7 | Monitoring — Prometheus, Grafana, Loki | [monitoring/README.md](monitoring/README.md) |
+| Guide | Description |
+|-------|-------------|
+| [GETTING-STARTED.md](GETTING-STARTED.md) | `az login`, Terraform, kubectl, bootstrap from laptop |
+| [aks/ARCHITECTURE.md](aks/ARCHITECTURE.md) | 2 VMs, prod Azure DB, staging in-cluster, Blob filestore |
+| [aks/README.md](aks/README.md) | AKS bootstrap, Helm, PgBouncer |
+| [terraform/README.md](terraform/README.md) | VNet, AKS, Postgres (prod only), Blob |
+| [cicd/README.md](cicd/README.md) | GitHub Actions, GHCR, GitOps |
+| [gitops/README.md](gitops/README.md) | Argo CD applications |
+| [backup/README.md](backup/README.md) | Backups and staging refresh |
+| [monitoring/README.md](monitoring/README.md) | Prometheus, Grafana, Loki |
+| [vault/README.md](vault/README.md) | Vault + External Secrets (optional) |
+| [docker/README.md](docker/README.md) | Local Compose only |
+| [RUNBOOK.md](RUNBOOK.md) | Day-2 operations |
 
-**Ops**
-
-| Doc | Purpose |
-|-----|---------|
-| [IP-CHANGE.md](IP-CHANGE.md) | VM public IP changed → update `VM_HOST` |
-| [RUNBOOK.md](RUNBOOK.md) | Rebuild drill, deploy failures, recovery |
-
-**Suggested order:** Docker → Terraform → CI/CD → Nginx → Backups → k3s.
+**Path:** local Docker (optional) → Terraform → seed secrets → bootstrap → Argo CD → refresh staging → monitoring.

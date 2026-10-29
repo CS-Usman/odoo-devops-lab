@@ -1,0 +1,21 @@
+{{- if or .Values.web.enabled .Values.cron.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "odoo.fullname" . }}-config
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+data:
+  web.conf: |
+    [options]
+    workers = {{ .Values.web.workers }}
+    max_cron_threads = {{ .Values.web.maxCronThreads }}
+    proxy_mode = {{ .Values.odoo.proxyMode }}
+    db_sslmode = {{ .Values.odoo.dbSslMode }}
+  cron.conf: |
+    [options]
+    workers = {{ .Values.cron.workers }}
+    max_cron_threads = {{ .Values.cron.maxCronThreads }}
+    proxy_mode = {{ .Values.odoo.proxyMode }}
+    db_sslmode = {{ .Values.odoo.dbSslMode }}
+{{- end }}

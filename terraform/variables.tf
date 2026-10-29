@@ -1,7 +1,7 @@
 variable "location" {
   description = "Azure region"
   type        = string
-  default     = "indiasouthcentral"
+  default     = "eastus"
 }
 
 variable "resource_group_name" {
@@ -10,41 +10,12 @@ variable "resource_group_name" {
   default     = "rg-odoo-devops-lab"
 }
 
-variable "vm_name" {
-  description = "Linux VM name"
-  type        = string
-  default     = "vm-odoo-lab"
-}
-
-variable "vm_size" {
-  description = "VM size (B2ms = 8 GB for k3s + Odoo + Vault + monitoring; B2s = 4 GB minimum)"
-  type        = string
-  default     = "Standard_B2ms"
-}
-
-variable "admin_username" {
-  description = "SSH login user on the VM"
-  type        = string
-  default     = "azureuser"
-}
-
-variable "admin_ssh_public_key" {
-  description = "SSH public key for VM login — Azure requires RSA (ssh-rsa), not ed25519"
-  type        = string
-}
-
-variable "allowed_ssh_cidr" {
-  description = "Your IP/CIDR allowed to SSH (use your public IP/32)"
-  type        = string
-  default     = "*"
-}
-
 variable "tags" {
   description = "Tags applied to resources"
   type        = map(string)
   default = {
     project = "odoo-devops-lab"
-    env     = "lab"
+    env     = "production"
   }
 }
 
@@ -67,13 +38,13 @@ variable "postgres_admin_password" {
 }
 
 variable "postgres_private_dns_zone_name" {
-  description = "Private DNS zone — must end with .postgres.database.azure.com and must NOT match postgres_server_name"
+  description = "Private DNS zone — must end with .postgres.database.azure.com"
   type        = string
   default     = "odoo-devops-lab.postgres.database.azure.com"
 }
 
 variable "postgres_database_name" {
-  description = "Production database for Odoo (Azure Postgres)"
+  description = "Production database for Odoo"
   type        = string
   default     = "odoo_devops_lab"
 }
@@ -85,9 +56,9 @@ variable "postgres_version" {
 }
 
 variable "postgres_sku_name" {
-  description = "Burstable B1ms is cheap for lab; change if SkuNotAvailable in your region"
+  description = "PostgreSQL SKU (e.g. GP_Standard_D2s_v3 for production-style lab)"
   type        = string
-  default     = "B_Standard_B1ms"
+  default     = "GP_Standard_D2s_v3"
 }
 
 variable "postgres_storage_mb" {
@@ -97,7 +68,7 @@ variable "postgres_storage_mb" {
 }
 
 variable "storage_account_name" {
-  description = "Globally unique storage account name (3-24 lowercase letters/numbers)"
+  description = "Globally unique storage account for backup blobs"
   type        = string
   default     = "stodoodevopslab"
 }
@@ -112,4 +83,16 @@ variable "backup_retention_days" {
   description = "Auto-delete backup blobs older than this many days"
   type        = number
   default     = 30
+}
+
+variable "odoo_prod_filestore_container_name" {
+  description = "Blob container — canonical production Odoo filestore (Blob Fuse / sync)"
+  type        = string
+  default     = "odoo-prod-filestore"
+}
+
+variable "odoo_staging_filestore_container_name" {
+  description = "Blob container — staging filestore copy (refreshed from prod)"
+  type        = string
+  default     = "odoo-staging-filestore"
 }

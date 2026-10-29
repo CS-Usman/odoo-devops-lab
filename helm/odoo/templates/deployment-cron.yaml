@@ -1,0 +1,93 @@
+{{- if .Values.cron.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "odoo.fullname" . }}-cron
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cron
+spec:
+  replicas: {{ .Values.cron.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "odoo.fullname" . }}
+      app.kubernetes.io/component: cron
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "odoo.fullname" . }}
+        app.kubernetes.io/component: cron
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "odoo.fullname" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.runAsUser }}
+      containers:
+        - name: odoo
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+            runAsUser: {{ .Values.securityContext.runAsUser }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          env:
+            - name: HOST
+              {{- if .Values.database.host }}
+              value: {{ .Values.database.host | quote }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: DB_HOST
+              {{- end }}
+            - name: USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: DB_USER
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: DB_PASSWORD
+            - name: PORT
+              value: {{ .Values.odoo.dbPort | quote }}
+            - name: PGSSLMODE
+              value: {{ .Values.odoo.dbSslMode | quote }}
+            - name: PROXY_MODE
+              value: {{ .Values.odoo.proxyMode | quote }}
+          args:
+            - odoo
+            - -c
+            - /etc/odoo/config/odoo.conf
+            - -d
+            - {{ .Values.odoo.dbName | quote }}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1024Mi
+          volumeMounts:
+            - name: odoo-data
+              mountPath: /var/lib/odoo
+            - name: odoo-config
+              mountPath: /etc/odoo/config/odoo.conf
+              subPath: cron.conf
+      volumes:
+        - name: odoo-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-filestore" (include "odoo.fullname" .)) }}
+        - name: odoo-config
+          configMap:
+            name: {{ include "odoo.fullname" . }}-config
+{{- end }}

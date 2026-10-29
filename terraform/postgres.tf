@@ -40,13 +40,21 @@ resource "azurerm_postgresql_flexible_server" "lab" {
   administrator_password        = var.postgres_admin_password
   sku_name                      = var.postgres_sku_name
   storage_mb                    = var.postgres_storage_mb
-  zone                          = "2"
-  backup_retention_days         = 7
-  geo_redundant_backup_enabled  = false
+  zone                          = var.postgres_zone
+  backup_retention_days         = var.postgres_backup_retention_days
+  geo_redundant_backup_enabled  = var.postgres_geo_redundant_backup
   public_network_access_enabled = false
   delegated_subnet_id           = azurerm_subnet.postgres.id
   private_dns_zone_id           = azurerm_private_dns_zone.postgres.id
   tags                          = var.tags
+
+  dynamic "high_availability" {
+    for_each = var.postgres_ha_enabled ? [1] : []
+    content {
+      mode                      = "ZoneRedundant"
+      standby_availability_zone = var.postgres_ha_standby_zone
+    }
+  }
 
   depends_on = [
     azurerm_private_dns_zone_virtual_network_link.postgres,
@@ -63,5 +71,5 @@ resource "azurerm_postgresql_flexible_server_database" "odoo" {
 resource "azurerm_postgresql_flexible_server_configuration" "require_secure_transport" {
   name      = "require_secure_transport"
   server_id = azurerm_postgresql_flexible_server.lab.id
-  value     = "off"
+  value     = "on"
 }
