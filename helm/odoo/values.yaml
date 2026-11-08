@@ -72,3 +72,5 @@ serviceAccount:
 # AKS DevOps Monitor: read pod metrics from metrics-server (see addons/devops_server_monitor).
 metricsApi:
   enabled: false
+  # Optional regex on pod name (helm → K8S_METRICS_POD_PATTERN). Empty = all pods in namespace.
+  podNamePattern: ""

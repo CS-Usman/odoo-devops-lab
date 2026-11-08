@@ -8,6 +8,7 @@ serviceAccount:
 # DevOps Monitor: list odoo-staging, postgres-staging, pgbouncer, etc. via metrics-server
 metricsApi:
   enabled: true
+  podNamePattern: "^(odoo-staging|postgres-staging).*"
 
 odoo:
   dbName: odoo_staging

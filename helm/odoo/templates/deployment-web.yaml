@@ -80,6 +80,10 @@ spec:
               value: {{ .Values.odoo.dbSslMode | quote }}
             - name: PROXY_MODE
               value: {{ .Values.odoo.proxyMode | quote }}
+            {{- if and .Values.metricsApi.enabled .Values.metricsApi.podNamePattern }}
+            - name: K8S_METRICS_POD_PATTERN
+              value: {{ .Values.metricsApi.podNamePattern | quote }}
+            {{- end }}
           args:
             - odoo
             - -c

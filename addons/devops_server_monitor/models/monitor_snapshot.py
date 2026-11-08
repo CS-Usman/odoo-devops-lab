@@ -71,6 +71,7 @@ class DevopsMonitorSnapshot(models.Model):
     db_size_mb = fields.Float(string="DB Size (MB)")
     db_connections = fields.Integer(string="DB Connections")
     db_message = fields.Char(string="DB Message")
+    db_neutralized = fields.Boolean(string="DB Neutralized", default=False)
     snapshot_count = fields.Integer(compute="_compute_snapshot_count")
 
     # Filestore
@@ -218,6 +219,7 @@ class DevopsMonitorSnapshot(models.Model):
                 "size_mb": self.db_size_mb,
                 "connections": self.db_connections,
                 "message": self.db_message,
+                "neutralized": self.db_neutralized,
             },
             "filestore": {
                 "status": self.filestore_status,
