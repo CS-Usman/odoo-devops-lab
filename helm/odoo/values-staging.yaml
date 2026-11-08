@@ -2,6 +2,13 @@ fullnameOverride: odoo-staging
 
 existingSecret: odoo-staging-db
 
+serviceAccount:
+  automountServiceAccountToken: true
+
+# DevOps Monitor: list odoo-staging, postgres-staging, pgbouncer, etc. via metrics-server
+metricsApi:
+  enabled: true
+
 odoo:
   dbName: odoo_staging
   dbPort: "5432"

@@ -342,6 +342,7 @@ class DevopsMonitorCollector(models.AbstractModel):
                         "pids": 0,
                     }
                 )
+        lines.sort(key=lambda row: row.get("name") or "")
         return {
             "docker_available": True,
             "container_count": len(lines),

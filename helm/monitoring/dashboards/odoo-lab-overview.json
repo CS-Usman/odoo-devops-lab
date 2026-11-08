@@ -37,8 +37,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "probe_success{job=~\".*odoo.*\"}",
-          "legendFormat": "{{job}}",
+          "expr": "probe_success{target=~\"odoo-.*\"}",
+          "legendFormat": "{{target}}",
           "refId": "A"
         }
       ],

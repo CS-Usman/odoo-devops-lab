@@ -1,5 +1,4 @@
-# Argo CD Application — odoo-staging (Phase 8B).
-# Manual sync first: Argo UI → Applications → odoo-staging → Sync
+# Argo CD — staging tracks git branch `staging` + staging/image-tag.yaml (CI on push to staging).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,16 +10,19 @@ spec:
   project: default
   source:
     repoURL: https://github.com/CS-Usman/odoo-devops-lab
-    targetRevision: main
+    targetRevision: staging
     path: helm/odoo
     helm:
       valueFiles:
         - values-staging.yaml
         - values-ghcr-pull.yaml
-        - environments/production/image-tag.yaml
+        - environments/staging/image-tag.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=false
