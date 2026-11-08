@@ -13,7 +13,7 @@ spec:
       interval: 60s
       rules:
         - alert: OdooProdDown
-          expr: probe_success{env="prod"} == 0
+          expr: probe_success{target="odoo-prod-health"} == 0
           for: 2m
           labels:
             severity: critical
@@ -22,7 +22,7 @@ spec:
             description: Blackbox probe to prod /devops/health has been down for 2 minutes.
 
         - alert: OdooStagingDown
-          expr: probe_success{env="staging"} == 0
+          expr: probe_success{target="odoo-staging-health"} == 0
           for: 2m
           labels:
             severity: critical

@@ -1,0 +1,3 @@
+# Updated by GitHub Actions on each staging branch build (GitOps).
+image:
+  tag: "aeb69b67bbbbde17cfaf3855938ca557bc357fc6"
