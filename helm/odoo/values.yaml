@@ -68,3 +68,7 @@ securityContext:
 serviceAccount:
   create: true
   automountServiceAccountToken: false
+
+# AKS DevOps Monitor: read pod metrics from metrics-server (see addons/devops_server_monitor).
+metricsApi:
+  enabled: false

@@ -1,20 +1,26 @@
 # Copy to terraform.tfvars (gitignored):
 #   cp terraform.tfvars.example terraform.tfvars
+#
+# Replace changeme402 with YOUR suffix (lowercase/numbers only for storage account).
+# Names must be globally unique in Azure.
 
 location            = "eastus"
 resource_group_name = "rg-odoo-devops-lab"
 
 aks_cluster_name   = "aks-odoo-devops-lab"
-aks_node_vm_size   = "Standard_D4s_v5"
-# Fixed 2-VM node pool (no scale-out beyond 2 workers)
+aks_node_vm_size   = "Standard_D2s_v3"
 aks_node_min_count = 2
 aks_node_max_count = 2
 
-postgres_server_name           = "psql-odoo-devops-lab-UNIQUE"
-postgres_admin_login           = "odooadmin"
-postgres_admin_password        = "CHANGE-ME-strong-password"
-postgres_database_name = "odoo_devops_lab"
-postgres_sku_name              = "GP_Standard_D2s_v3"
-postgres_ha_enabled              = false
+# Postgres server: lowercase letters, numbers, hyphens (no uppercase)
+postgres_server_name    = "psql-odoo-devops-changeme402"
+postgres_admin_login    = "odooadmin"
+postgres_admin_password = "CHANGE-ME-strong-password"
+postgres_database_name  = "odoo_devops_lab"
+postgres_version        = "16"
+postgres_sku_name       = "GP_Standard_D2s_v3"
+# postgres_zone         = "1"   # omit in eastus if create fails; default is null
+postgres_ha_enabled     = false
 
-storage_account_name = "stodoodevopslabUNIQUE"
+# Storage account: 3–24 chars, lowercase letters and numbers ONLY (no hyphens)
+storage_account_name = "stodoodevops402"

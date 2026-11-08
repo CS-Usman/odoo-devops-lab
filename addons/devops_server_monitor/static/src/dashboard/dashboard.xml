@@ -328,7 +328,9 @@
                             <div class="card-body p-0">
                                 <t t-if="!state.data.docker.available">
                                     <div class="p-3 text-muted">
-                                        Docker CLI not available from this Odoo container (mount <code>/var/run/docker.sock</code> to enable).
+                                        VM: mount <code>/var/run/docker.sock</code> for Docker stats. AKS: enable Helm
+                                        <code>metricsApi</code>, ensure metrics-server is running, rebuild/push the Odoo image
+                                        with the latest <code>devops_server_monitor</code> addon.
                                     </div>
                                 </t>
                                 <t t-elif="!state.data.docker.containers.length">

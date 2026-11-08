@@ -46,11 +46,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.existingSecret }}
                   key: DB_PASSWORD
+            {{- if not .Values.useWildcardDatabase }}
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.existingSecret }}
                   key: POSTGRES_DB
+            {{- end }}
             - name: POOL_MODE
               value: {{ .Values.poolMode | quote }}
             - name: MAX_CLIENT_CONN

@@ -11,9 +11,9 @@ variable "aks_dns_prefix" {
 }
 
 variable "aks_node_vm_size" {
-  description = "AKS user node pool VM SKU"
+  description = "AKS node VM SKU — new subs often have 0 Dsv5 quota; default D2s_v3 or B2s"
   type        = string
-  default     = "Standard_D4s_v5"
+  default     = "Standard_D2s_v3"
 }
 
 variable "aks_node_min_count" {
@@ -40,9 +40,21 @@ variable "aks_node_os_disk_gb" {
 }
 
 variable "aks_availability_zones" {
-  description = "Spread nodes across zones (use [\"1\",\"2\"] when region supports it)"
+  description = "AKS node pool zones. eastus often supports none — use [] (default). Use [\"1\",\"2\"] only in zonal regions (e.g. eastus2)."
   type        = list(string)
-  default     = ["1", "2"]
+  default     = []
+}
+
+variable "aks_service_cidr" {
+  description = "Kubernetes service CIDR — must NOT overlap VNet 10.0.0.0/16"
+  type        = string
+  default     = "10.1.0.0/16"
+}
+
+variable "aks_dns_service_ip" {
+  description = "DNS IP inside service_cidr (typically .10)"
+  type        = string
+  default     = "10.1.0.10"
 }
 
 variable "postgres_ha_enabled" {
@@ -57,8 +69,10 @@ variable "postgres_ha_standby_zone" {
 }
 
 variable "postgres_zone" {
-  type    = string
-  default = "2"
+  description = "Postgres availability zone. Leave null for eastus when zones are not offered for your SKU."
+  type        = string
+  default     = null
+  nullable    = true
 }
 
 variable "postgres_backup_retention_days" {

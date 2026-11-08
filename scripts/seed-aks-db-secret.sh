@@ -14,7 +14,13 @@ source "${SCRIPT_DIR}/lib/common.sh"
 
 load_env
 
-: "${POSTGRES_FQDN:?Azure Postgres FQDN — production only}"
+if [[ -z "${POSTGRES_FQDN:-}" ]] && [[ -d "${REPO_DIR}/terraform" ]]; then
+  if POSTGRES_FQDN="$(terraform -chdir="${REPO_DIR}/terraform" output -raw postgres_fqdn 2>/dev/null)"; then
+    export POSTGRES_FQDN
+  fi
+fi
+
+: "${POSTGRES_FQDN:?Set POSTGRES_FQDN or run terraform apply (terraform output postgres_fqdn)}"
 : "${DB_USER:?}"
 : "${DB_PASSWORD:?}"
 : "${STAGING_DB_PASSWORD:?Password for helm/postgres-staging}"

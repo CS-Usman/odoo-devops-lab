@@ -50,13 +50,13 @@ variable "postgres_database_name" {
 }
 
 variable "postgres_version" {
-  description = "PostgreSQL major version"
+  description = "PostgreSQL major version on Flexible Server (16 is default for new eastus GP creates)"
   type        = string
   default     = "16"
 }
 
 variable "postgres_sku_name" {
-  description = "PostgreSQL SKU (e.g. GP_Standard_D2s_v3 for production-style lab)"
+  description = "PostgreSQL SKU — GP_Standard_D2s_v3 for VNet-integrated prod DB; B_Standard_B1ms may fail version/SKU checks in some regions"
   type        = string
   default     = "GP_Standard_D2s_v3"
 }

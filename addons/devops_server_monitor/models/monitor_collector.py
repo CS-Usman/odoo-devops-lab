@@ -6,9 +6,12 @@ import logging
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import tempfile
 import time
+import urllib.error
+import urllib.request
 
 from odoo import api, fields, models, tools
 
@@ -220,6 +223,9 @@ class DevopsMonitorCollector(models.AbstractModel):
         docker = self._collect_docker_stats_metrics()
         if docker["container_count"] > 0:
             return docker
+        k8s = self._collect_kubernetes_metrics_api()
+        if k8s["container_count"] > 0:
+            return k8s
         k8s = self._collect_kubernetes_pod_metrics()
         if k8s["container_count"] > 0:
             return k8s
@@ -278,6 +284,64 @@ class DevopsMonitorCollector(models.AbstractModel):
                 )
         except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
             _logger.warning("Docker collection error: %s", exc)
+        return {
+            "docker_available": True,
+            "container_count": len(lines),
+            "container_lines": lines,
+        }
+
+    @api.model
+    def _collect_kubernetes_metrics_api(self):
+        """AKS: pod CPU/memory via metrics.k8s.io (in-cluster ServiceAccount token)."""
+        token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        ca_path = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        api_host = os.getenv("KUBERNETES_SERVICE_HOST")
+        api_port = os.getenv("KUBERNETES_SERVICE_PORT", "443")
+        if not (api_host and os.path.isfile(token_path) and os.path.isfile(ca_path)):
+            return {
+                "docker_available": False,
+                "container_count": 0,
+                "container_lines": [],
+            }
+        namespace = os.getenv("K8S_METRICS_NAMESPACE", "odoo")
+        url = f"https://{api_host}:{api_port}/apis/metrics.k8s.io/v1beta1/" f"namespaces/{namespace}/pods"
+        try:
+            with open(token_path, encoding="utf-8") as handle:
+                token = handle.read().strip()
+            context = ssl.create_default_context(cafile=ca_path)
+            request = urllib.request.Request(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            with urllib.request.urlopen(request, context=context, timeout=15) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, json.JSONDecodeError, OSError) as exc:
+            _logger.warning("Kubernetes metrics API failed: %s", exc)
+            return {
+                "docker_available": True,
+                "container_count": 0,
+                "container_lines": [],
+            }
+        lines = []
+        for item in payload.get("items", []):
+            pod_name = item.get("metadata", {}).get("name", "")
+            for container in item.get("containers", []):
+                name = f"{pod_name}/{container.get('name', '')}"
+                cpu = (container.get("usage") or {}).get("cpu", "")
+                mem = (container.get("usage") or {}).get("memory", "")
+                lines.append(
+                    {
+                        "name": name,
+                        "container_id": "",
+                        "cpu_percent": self._parse_k8s_cpu_percent(cpu),
+                        "memory_used_mb": self._parse_k8s_mem_mb(mem),
+                        "memory_limit_mb": 0.0,
+                        "memory_percent": 0.0,
+                        "network_io": "kubernetes (metrics-server)",
+                        "block_io": "",
+                        "pids": 0,
+                    }
+                )
         return {
             "docker_available": True,
             "container_count": len(lines),

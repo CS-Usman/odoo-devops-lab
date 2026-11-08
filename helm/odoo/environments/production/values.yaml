@@ -1,9 +1,11 @@
 web:
-  replicas: 2
+  replicas: 1
+  maxCronThreads: 1
 
 cron:
-  enabled: true
-  replicas: 1
+  # Separate cron pod shares RWO filestore PVC with web — only one can mount; use web maxCronThreads until Blob RWX.
+  enabled: false
+  replicas: 0
 
 persistence:
   # Prefer Blob Fuse CSI → odoo-prod-filestore container (see k8s/storage/README.md).
@@ -16,7 +18,7 @@ podDisruptionBudget:
   minAvailable: 1
 
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 4
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
   targetCPUUtilizationPercentage: 75

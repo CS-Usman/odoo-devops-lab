@@ -57,15 +57,18 @@ Edit **`terraform.tfvars`** — use **globally unique** names:
 - `storage_account_name` — lowercase, no dashes, unique
 - Strong `postgres_admin_password`
 
-**Fresh subscription:** if you have old `terraform.tfstate` from a deleted subscription, remove or archive it before apply:
+**Fresh start (old VM lab or deleted resource group):** archive local state so Terraform does not reference `vm-odoo-lab` and other removed resources:
 
 ```bash
-# Only if state points to deleted infra:
-# mv terraform.tfstate terraform.tfstate.old
+cd terraform
+mv terraform.tfstate "terraform.tfstate.legacy.$(date +%Y%m%d)" 2>/dev/null || true
+mv terraform.tfstate.backup "terraform.tfstate.backup.legacy" 2>/dev/null || true
 terraform init
 terraform plan
 terraform apply
 ```
+
+**`terraform.tfvars` names:** replace example suffixes — Postgres `psql-odoo-devops-changeme402` (lowercase/hyphens), storage `stodoodevops402` (lowercase letters/numbers only, 3–24 chars). Do not copy literal `UNIQUE` or uppercase from old examples.
 
 Save outputs:
 
@@ -176,6 +179,9 @@ docker compose up -d --build
 |-------|--------|
 | `az login` wrong sub | `az account set --subscription ...` |
 | Terraform name taken | Change unique suffixes in tfvars |
+| **AKS `InsufficientVCPUQuota`** | Use smaller `aks_node_vm_size` (e.g. `Standard_D2s_v3` or `Standard_B2s`); or [request quota](https://learn.microsoft.com/en-us/azure/quotas/view-quotas) for **eastus** |
+| **AKS `AvailabilityZoneNotSupported` (eastus)** | Set `aks_availability_zones = []` in tfvars (default in repo) — do not use `["1","2"]` in East US |
+| **Postgres `Version should be in: []` in eastus** | Often **not** SKU/version — run `az postgres flexible-server list-skus --location eastus` and check **`OfferRestricted: Enabled`** / *Provisioning is restricted in this region*. Open a **quota/limit** support ticket to allow **PostgreSQL Flexible Server in East US**, or redeploy the stack in **eastus2** (unrestricted). |
 | `kubectl` forbidden | Re-run `az aks get-credentials` |
 | Pods `ImagePullBackOff` | GHCR secret or build/push image |
 | Staging DB empty | Run `refresh-staging-from-prod.sh` after prod exists |

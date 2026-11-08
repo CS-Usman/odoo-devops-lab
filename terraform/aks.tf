@@ -28,8 +28,10 @@ resource "azurerm_kubernetes_cluster" "lab" {
   }
 
   network_profile {
-    network_plugin = "azure"
-    outbound_type  = "loadBalancer"
+    network_plugin   = "azure"
+    outbound_type    = "loadBalancer"
+    service_cidr     = var.aks_service_cidr
+    dns_service_ip   = var.aks_dns_service_ip
   }
 
   oidc_issuer_enabled       = true

@@ -2,3 +2,11 @@ fullnameOverride: odoo-prod
 
 odoo:
   dbName: odoo_devops_lab
+  # Odoo → PgBouncer (plain TCP). PgBouncer → Azure Postgres uses SERVER_TLS_SSLMODE=require.
+  dbSslMode: disable
+
+serviceAccount:
+  automountServiceAccountToken: true
+
+metricsApi:
+  enabled: true

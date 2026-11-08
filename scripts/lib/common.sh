@@ -15,6 +15,9 @@ load_env() {
 }
 
 require_kubeconfig() {
+  if [[ -z "${KUBECONFIG:-}" && -f "${HOME}/.kube/config" ]]; then
+    export KUBECONFIG="${HOME}/.kube/config"
+  fi
   : "${KUBECONFIG:?Set KUBECONFIG or run: az aks get-credentials ...}"
 }
 

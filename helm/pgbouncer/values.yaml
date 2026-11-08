@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: edoburu/pgbouncer
-  tag: "1.23.1-p0"
+  tag: "v1.23.1-p3"
   pullPolicy: IfNotPresent
 
 service:
@@ -11,6 +11,10 @@ service:
 
 # Secret keys: POSTGRES_HOST (Azure FQDN), DB_USER, DB_PASSWORD, POSTGRES_DB
 existingSecret: odoo-db
+
+# When true, do not set DB_NAME in the container — edoburu configures "* = host=<Azure>"
+# so Odoo can use postgres (bootstrap) and odoo_devops_lab through the same pool.
+useWildcardDatabase: true
 
 poolMode: session
 defaultPoolSize: 20

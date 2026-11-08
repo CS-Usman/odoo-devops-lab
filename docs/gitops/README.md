@@ -27,6 +27,20 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.pas
 
 Production apps use automated sync with prune and self-heal. CI only updates the **image tag** file; Argo applies the rest of the chart from git.
 
+## Source of truth (day 2+)
+
+After Argo CD is installed and Applications are synced:
+
+| Do in git / CI | Do once on cluster (not in git) |
+|----------------|--------------------------------|
+| Helm value changes, PgBouncer/Odoo chart fixes | `seed-aks-db-secret.sh`, `ghcr-pull` secret |
+| Image tag bumps via `docker-build.yml` | DB init jobs, storage keys in `.env` |
+| `git push main` → Argo syncs | `terraform apply` for Azure resources |
+
+Avoid `./scripts/deploy-aks-apps.sh` for routine changes once Argo shows **Synced/Healthy** — it bypasses GitOps and fights self-heal.
+
+**Before first Argo sync:** commit and push your branch so the remote matches what you want the cluster to run; otherwise Argo will roll back to old `main`.
+
 ## Private repository
 
 ```bash
