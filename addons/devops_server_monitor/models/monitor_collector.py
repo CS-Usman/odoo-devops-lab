@@ -448,11 +448,14 @@ class DevopsMonitorCollector(models.AbstractModel):
 
     @api.model
     def _parse_k8s_cpu_percent(self, value):
-        """Convert kubectl CPU (e.g. 100m) to rough % of 2 vCPU node."""
+        """Convert metrics-server CPU (100m, 1, or 154465648n) to rough % of node."""
         if not value:
             return 0.0
         value = value.strip()
-        cores = float(os.getenv("K3S_NODE_CPU_CORES", "2"))
+        cores = float(os.getenv("K8S_NODE_CPU_CORES", os.getenv("K3S_NODE_CPU_CORES", "4")))
+        if value.endswith("n"):
+            nanocores = float(value[:-1])
+            return round((nanocores / 1e9 / cores) * 100, 2)
         if value.endswith("m"):
             millicores = float(value[:-1])
             return round((millicores / (cores * 1000)) * 100, 2)
