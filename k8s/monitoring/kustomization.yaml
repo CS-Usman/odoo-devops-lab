@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+  - ../../helm/monitoring/prometheus-rules-odoo-lab.yaml
+configMapGenerator:
+  - name: grafana-dashboard-odoo-lab
+    files:
+      - odoo-lab-overview.json=../../helm/monitoring/dashboards/odoo-lab-overview.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+      disableNameSuffixHash: true

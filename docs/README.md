@@ -16,4 +16,4 @@
 | [docker/README.md](docker/README.md) | Local Compose only |
 | [RUNBOOK.md](RUNBOOK.md) | Day-2 operations |
 
-**Path:** local Docker (optional) → Terraform → seed secrets → bootstrap → Argo CD → refresh staging → monitoring.
+**Path:** local Docker (optional) → Terraform → seed secrets → bootstrap → Argo CD (apps + **monitoring**) → refresh staging.

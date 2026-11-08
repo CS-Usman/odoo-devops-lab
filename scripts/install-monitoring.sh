@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Install Prometheus + Grafana (kube-prometheus-stack) on AKS.
+# Bootstrap monitoring when Argo CD is not used yet. Production path: push git + Argo Applications (monitoring*).
+# Run from repo root: ./scripts/install-monitoring.sh   (not from scripts/ without ./)
 
 set -euo pipefail
 
@@ -62,7 +63,7 @@ until kubectl -n "$MONITORING_NAMESPACE" get prometheus "${MONITORING_RELEASE}-p
 done
 
 kubectl -n "$MONITORING_NAMESPACE" wait --for=condition=Ready \
-  "prometheus/${MONITORING_RELEASE}-prometheus" --timeout=300s
+  "prometheus/${MONITORING_RELEASE}-prometheus" --timeout=600s
 
 if kubectl -n "$MONITORING_NAMESPACE" get alertmanager "${MONITORING_RELEASE}-alertmanager" >/dev/null 2>&1; then
   kubectl -n "$MONITORING_NAMESPACE" wait --for=condition=Ready \
@@ -143,4 +144,4 @@ echo "  Prometheus:    kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MON
 echo "                 → http://127.0.0.1:9090/alerts"
 echo "  Alertmanager:  kubectl -n ${MONITORING_NAMESPACE} port-forward svc/${MONITORING_RELEASE}-alertmanager 9093:9093"
 echo "                 → http://127.0.0.1:9093"
-echo "Next: ./scripts/install-argocd.sh for GitOps."
+echo "GitOps: k8s/argocd/applications/monitoring*.yaml — prefer Argo sync after git push."

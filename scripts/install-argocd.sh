@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install Argo CD. Apps: postgres-staging → pgbouncer → odoo-prod → odoo-staging.
+# Install Argo CD. Applications in k8s/argocd/applications/ (postgres, pgbouncer, odoo, monitoring stack).
 
 set -euo pipefail
 

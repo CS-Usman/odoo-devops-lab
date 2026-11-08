@@ -9,11 +9,18 @@ az aks get-credentials -g rg-odoo-devops-lab -n aks-odoo-devops-lab
 
 Applications live in `k8s/argocd/applications/`:
 
-| Application | Helm path |
-|-------------|-----------|
+| Application | Source |
+|-------------|--------|
+| `postgres-staging` | `helm/postgres` (staging) |
 | `pgbouncer` | `helm/pgbouncer` |
 | `odoo-prod` | `helm/odoo` + production value files |
 | `odoo-staging` | `helm/odoo` + `values-staging.yaml` |
+| `monitoring` | `kube-prometheus-stack` + `helm/monitoring/values.yaml` |
+| `monitoring-manifests` | `k8s/monitoring` (rules + Grafana dashboard) |
+| `monitoring-blackbox` | blackbox exporter + `blackbox-values.yaml` |
+| `monitoring-loki` / `monitoring-promtail` | log stack values under `helm/monitoring/` |
+
+Monitoring apps use **sync-wave** 10–14 so Prometheus CRDs exist before rules and log agents.
 
 ## UI access
 
