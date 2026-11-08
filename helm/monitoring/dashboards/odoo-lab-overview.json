@@ -31,13 +31,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
         "textMode": "auto"
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "probe_success{target=~\"odoo-.*\"}",
+          "expr": "max by (target) (probe_success{target=~\"odoo-(prod|staging)-health\"})",
           "legendFormat": "{{target}}",
           "refId": "A"
         }
