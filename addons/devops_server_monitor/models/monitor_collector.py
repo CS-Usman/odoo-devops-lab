@@ -132,6 +132,17 @@ class DevopsMonitorCollector(models.AbstractModel):
     # -------------------------------------------------------------------------
 
     @api.model
+    def _k8s_pod_metrics_allowed(self, pod_name):
+        pattern = os.getenv("K8S_METRICS_POD_PATTERN", "").strip()
+        if not pattern:
+            return True
+        try:
+            return re.match(pattern, pod_name) is not None
+        except re.error:
+            _logger.warning("Invalid K8S_METRICS_POD_PATTERN: %s", pattern)
+            return True
+
+    @api.model
     def _collect_db_metrics(self):
         result = {
             "db_status": "unknown",
@@ -140,6 +151,7 @@ class DevopsMonitorCollector(models.AbstractModel):
             "db_size_mb": 0.0,
             "db_connections": 0,
             "db_message": "",
+            "db_neutralized": False,
         }
         start = time.perf_counter()
         try:
@@ -159,6 +171,18 @@ class DevopsMonitorCollector(models.AbstractModel):
                     """
                 )
                 result["db_connections"] = self.env.cr.fetchone()[0]
+                self.env.cr.execute(
+                    """
+                    SELECT value FROM ir_config_parameter
+                    WHERE key = 'database.is_neutralized'
+                    LIMIT 1
+                    """
+                )
+                neutral = self.env.cr.fetchone()
+                if neutral and str(neutral[0]).lower() in ("1", "true", "yes"):
+                    result["db_neutralized"] = True
+                    if result["db_status"] == "ok":
+                        result["db_message"] = "PostgreSQL responding (neutralized for staging)"
         except Exception as exc:
             result["db_status"] = "critical"
             result["db_message"] = str(exc)[:255]
@@ -325,6 +349,8 @@ class DevopsMonitorCollector(models.AbstractModel):
         lines = []
         for item in payload.get("items", []):
             pod_name = item.get("metadata", {}).get("name", "")
+            if not self._k8s_pod_metrics_allowed(pod_name):
+                continue
             for container in item.get("containers", []):
                 name = f"{pod_name}/{container.get('name', '')}"
                 cpu = (container.get("usage") or {}).get("cpu", "")
@@ -401,6 +427,8 @@ class DevopsMonitorCollector(models.AbstractModel):
             if len(parts) < 3:
                 continue
             name, cpu, mem = parts[0], parts[1], parts[2]
+            if not self._k8s_pod_metrics_allowed(name):
+                continue
             lines.append(
                 {
                     "name": name,

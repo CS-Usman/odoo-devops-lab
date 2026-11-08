@@ -10,3 +10,4 @@ serviceAccount:
 
 metricsApi:
   enabled: true
+  podNamePattern: "^(odoo-prod|pgbouncer).*"

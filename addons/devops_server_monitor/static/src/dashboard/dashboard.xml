@@ -182,6 +182,9 @@
                                     <t t-esc="state.data.database.name"/> |
                                     <t t-esc="state.data.database.connections"/> conn |
                                     <t t-esc="state.data.database.size_mb"/> MB
+                                    <t t-if="state.data.database.neutralized">
+                                        <span class="badge bg-info ms-1">neutralized</span>
+                                    </t>
                                 </div>
                                 <DevopsMiniChart type="'dotted'" color="chartColors.db"
                                                  values="state.charts.db_latency"

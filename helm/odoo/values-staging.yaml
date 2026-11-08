@@ -5,9 +5,10 @@ existingSecret: odoo-staging-db
 serviceAccount:
   automountServiceAccountToken: true
 
-# DevOps Monitor: list odoo-staging, postgres-staging, pgbouncer, etc. via metrics-server
+# DevOps Monitor: list odoo-staging + postgres-staging only (not prod/pgbouncer pods).
 metricsApi:
   enabled: true
+  podNamePattern: "^(odoo-staging|postgres-staging).*"
 
 odoo:
   dbName: odoo_staging
