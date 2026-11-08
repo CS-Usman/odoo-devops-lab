@@ -159,6 +159,7 @@ class DevopsMonitorCollector(models.AbstractModel):
             result["db_latency_ms"] = round((time.perf_counter() - start) * 1000, 2)
             result["db_status"] = "ok"
             result["db_message"] = "PostgreSQL responding"
+            self._apply_db_neutralized_flag(result)
             if self._is_postgresql():
                 self.env.cr.execute("SELECT pg_database_size(current_database())")
                 size = self.env.cr.fetchone()[0]
@@ -171,18 +172,6 @@ class DevopsMonitorCollector(models.AbstractModel):
                     """
                 )
                 result["db_connections"] = self.env.cr.fetchone()[0]
-                self.env.cr.execute(
-                    """
-                    SELECT value FROM ir_config_parameter
-                    WHERE key = 'database.is_neutralized'
-                    LIMIT 1
-                    """
-                )
-                neutral = self.env.cr.fetchone()
-                if neutral and str(neutral[0]).lower() in ("1", "true", "yes"):
-                    result["db_neutralized"] = True
-                    if result["db_status"] == "ok":
-                        result["db_message"] = "PostgreSQL responding (neutralized for staging)"
         except Exception as exc:
             result["db_status"] = "critical"
             result["db_message"] = str(exc)[:255]
@@ -193,8 +182,31 @@ class DevopsMonitorCollector(models.AbstractModel):
         return result
 
     @api.model
+    def _apply_db_neutralized_flag(self, result):
+        try:
+            self.env.cr.execute(
+                """
+                SELECT value FROM ir_config_parameter
+                WHERE key = 'database.is_neutralized'
+                LIMIT 1
+                """
+            )
+            neutral = self.env.cr.fetchone()
+            if neutral and str(neutral[0]).lower() in ("1", "true", "yes"):
+                result["db_neutralized"] = True
+                if result.get("db_status") == "ok":
+                    result["db_message"] = "PostgreSQL responding (neutralized for staging)"
+        except Exception as exc:
+            _logger.debug("Could not read database.is_neutralized: %s", exc)
+
+    @api.model
     def _is_postgresql(self):
-        return self.env.cr._cnx.__class__.__module__.startswith("psycopg2")
+        try:
+            self.env.cr.execute("SELECT version()")
+            row = self.env.cr.fetchone()
+            return bool(row and "PostgreSQL" in (row[0] or ""))
+        except Exception:
+            return False
 
     # -------------------------------------------------------------------------
     # Filestore
@@ -478,9 +490,9 @@ class DevopsMonitorCollector(models.AbstractModel):
     @api.model
     def _parse_k8s_cpu_percent(self, value):
         """Convert metrics-server CPU (100m, 1, or 154465648n) to rough % of node."""
-        if not value:
+        if value is None or value == "":
             return 0.0
-        value = value.strip()
+        value = str(value).strip()
         cores = float(os.getenv("K8S_NODE_CPU_CORES", os.getenv("K3S_NODE_CPU_CORES", "4")))
         if value.endswith("n"):
             nanocores = float(value[:-1])
