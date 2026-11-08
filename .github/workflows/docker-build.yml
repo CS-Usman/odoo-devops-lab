@@ -3,6 +3,9 @@ name: Build and push Docker image
 on:
   push:
     branches: [main]
+    # Skip CI→GitOps tag-only commits (avoids double build + wrong GITHUB_SHA tag).
+    paths-ignore:
+      - helm/odoo/environments/production/image-tag.yaml
   workflow_dispatch:
 
 permissions:
@@ -72,4 +75,14 @@ jobs:
           git add "$FILE"
           git diff --staged --quiet && exit 0
           git commit -m "gitops(prod): bump Odoo image to ${GITHUB_SHA}"
-          git push
+          pushed=0
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin main; then
+              pushed=1
+              break
+            fi
+            echo "Push failed (attempt ${attempt}), retrying..."
+            sleep 5
+          done
+          test "$pushed" -eq 1

@@ -13,10 +13,16 @@
 git push main
   → GitHub Actions builds ghcr.io/cs-usman/odoo-devops-lab:<sha>
   → commits helm/odoo/environments/production/image-tag.yaml
-  → Argo CD syncs odoo-prod + pgbouncer Applications
+  → Argo CD syncs odoo-prod (+ odoo-staging uses same tag file)
 ```
 
+**Monitoring / PgBouncer / Helm values:** no extra workflow — push to `main` and Argo CD syncs the Applications (`monitoring*`, `pgbouncer`, etc.). Only the **Odoo container image** is built and tag-bumped by Actions.
+
+The docker-build workflow ignores pushes that only change `image-tag.yaml` so bot commits do not trigger a second build.
+
 No SSH deploy. Cluster changes come from git + Argo CD.
+
+If `git push` is rejected after a local commit, reconcile with `git pull --rebase origin main` then push (same pattern the gitops job uses).
 
 ## Local checks
 
