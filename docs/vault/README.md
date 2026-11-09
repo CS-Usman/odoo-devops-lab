@@ -23,6 +23,7 @@ Argo CD / Helm → Odoo + PgBouncer pods
 ./scripts/install-external-secrets.sh
 ```
 
-For first cluster bring-up without Vault, use `./scripts/seed-aks-db-secret.sh` then migrate to ESO later.
+For new clusters, prefer **[docs/secrets/README.md](../secrets/README.md)** (Azure Key Vault).
+Fallback without any vault: `./scripts/seed-aks-db-secret.sh`.
 
 See `k8s/external-secrets/` for manifests.

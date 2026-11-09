@@ -47,3 +47,17 @@ output "odoo_staging_filestore_container_name" {
 output "storage_blob_endpoint" {
   value = azurerm_storage_account.backups.primary_blob_endpoint
 }
+
+output "key_vault_name" {
+  description = "Azure Key Vault for DB credentials (ESO syncs to Kubernetes)"
+  value       = azurerm_key_vault.lab.name
+}
+
+output "key_vault_uri" {
+  value = azurerm_key_vault.lab.vault_uri
+}
+
+output "eso_managed_identity_client_id" {
+  description = "Workload identity client ID for External Secrets Operator"
+  value       = azurerm_user_assigned_identity.eso.client_id
+}

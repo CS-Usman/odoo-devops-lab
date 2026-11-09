@@ -17,6 +17,7 @@ spec:
         - values-staging.yaml
         - values-ghcr-pull.yaml
         - environments/staging/image-tag.yaml
+        - environments/staging/ingress.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: odoo

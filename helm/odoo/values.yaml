@@ -60,6 +60,22 @@ service:
   port: 8069
   longpollingPort: 8072
 
+# Public access via ingress-nginx (see k8s/argocd/applications/ingress-nginx.yaml).
+# Set host after: kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+# Lab DNS trick: 52-14-0-26.sslip.io resolves to 52.14.0.26
+ingress:
+  enabled: false
+  className: nginx
+  host: ""
+  path: /
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "7200"
+  longPolling:
+    enabled: true
+    path: /longpolling
+  tls: []
+
 securityContext:
   runAsNonRoot: true
   runAsUser: 101
