@@ -17,8 +17,9 @@
 ## Diagram (2 VMs, horizontal)
 
 ```text
-INTERNET ──► Application Gateway ──► odoo.example.com ──► Service odoo-prod-web
-                              └──► staging.odoo.example.com ──► Service odoo-staging-web
+INTERNET ──► ingress-nginx (Azure LB) ──► odoo.example.com ──► Ingress ──► odoo-prod-web
+                              └──► staging.example.com ──► Ingress ──► odoo-staging-web
+                              (optional: Application Gateway in front for WAF/TLS)
 
   VM 1 ◄────────────────────────────────────────────────────────────► VM 2
  ┌─────────────────────────────┐              ┌─────────────────────────────┐

@@ -1,0 +1,5 @@
+# Set host to your public name or <LB-IP-with-dashes>.sslip.io (see docs/aks/INGRESS.md).
+ingress:
+  enabled: false
+  host: ""
+  tls: []

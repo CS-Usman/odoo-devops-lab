@@ -96,3 +96,21 @@ variable "odoo_staging_filestore_container_name" {
   type        = string
   default     = "odoo-staging-filestore"
 }
+
+variable "key_vault_name" {
+  description = "Globally unique Key Vault name (3–24 alphanumerics and hyphens)"
+  type        = string
+  default     = "kv-odoo-devops-lab"
+}
+
+variable "eso_namespace" {
+  description = "Namespace for External Secrets Operator"
+  type        = string
+  default     = "external-secrets"
+}
+
+variable "eso_service_account" {
+  description = "Service account name ESO uses for Azure Key Vault workload identity"
+  type        = string
+  default     = "external-secrets"
+}

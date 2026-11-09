@@ -24,3 +24,6 @@ postgres_ha_enabled     = false
 
 # Storage account: 3–24 chars, lowercase letters and numbers ONLY (no hyphens)
 storage_account_name = "stodoodevops402"
+
+# Key Vault: globally unique; ESO workload identity reads secrets (see docs/secrets/README.md)
+key_vault_name = "kv-odoo-devops-402"

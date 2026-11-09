@@ -12,7 +12,9 @@
 | [gitops/README.md](gitops/README.md) | Argo CD applications |
 | [backup/README.md](backup/README.md) | Backups and staging refresh |
 | [monitoring/README.md](monitoring/README.md) | Prometheus, Grafana, Loki |
-| [vault/README.md](vault/README.md) | Vault + External Secrets (optional) |
+| [secrets/README.md](secrets/README.md) | Azure Key Vault + External Secrets (default) |
+| [aks/INGRESS.md](aks/INGRESS.md) | ingress-nginx + Odoo Ingress |
+| [vault/README.md](vault/README.md) | HashiCorp Vault (optional) |
 | [docker/README.md](docker/README.md) | Local Compose only |
 | [RUNBOOK.md](RUNBOOK.md) | Day-2 operations |
 
