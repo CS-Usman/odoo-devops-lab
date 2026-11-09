@@ -59,6 +59,15 @@ resource "azurerm_postgresql_flexible_server" "lab" {
   depends_on = [
     azurerm_private_dns_zone_virtual_network_link.postgres,
   ]
+
+  # Existing Flexible Server zone/HA cannot be changed in place (Azure API error).
+  # Match postgres_zone in tfvars to the live server, or rely on ignore_changes after first create.
+  lifecycle {
+    ignore_changes = [
+      zone,
+      high_availability,
+    ]
+  }
 }
 
 resource "azurerm_postgresql_flexible_server_database" "odoo" {
