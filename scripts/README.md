@@ -16,6 +16,7 @@ Copy [.env.azure.example](../.env.azure.example) → `.env`.
 | **seed-aks-db-secret.sh** | Fallback: create secrets directly in etcd |
 | **bootstrap-aks.sh** | First deploy after Terraform |
 | **deploy-aks-apps.sh** | Helm: postgres-staging → pgbouncer → odoo-prod → odoo-staging |
+| **install-backup-cronjob.sh** | Nightly CronJob → Blob (workload identity) |
 | **backup.sh** | Prod Azure pg_dump + filestore → Blob (dated + prod filestore container) |
 | **restore.sh** | Prod restore from dated backup (Azure DB) |
 | **refresh-staging-from-prod.sh** | Wipe staging DB/PVC filestore; copy live prod |
@@ -27,6 +28,7 @@ Copy [.env.azure.example](../.env.azure.example) → `.env`.
 | **install-external-secrets.sh** | ESO + Vault manifests |
 | **vault-seed-secrets.sh** / **vault-bootstrap-k8s-auth.sh** | Optional Vault |
 | **install-blobfuse-csi.sh** | Pointer to Blob Fuse docs (optional CSI) |
+| **migrate-prod-filestore-rwx.sh** | RWO disk → Azure File RWX for 2+ prod web pods |
 
 Shared helpers: [lib/common.sh](lib/common.sh)
 
@@ -34,8 +36,12 @@ Typical flow:
 
 ```bash
 terraform apply
-./scripts/seed-aks-db-secret.sh
+./scripts/seed-keyvault-secrets.sh
+./scripts/install-external-secrets-azure.sh
 ./scripts/bootstrap-aks.sh
+./scripts/install-backup-cronjob.sh
 ./scripts/refresh-staging-from-prod.sh
 SMOKE_URL=https://odoo.example.com ./scripts/smoke-test.sh
 ```
+
+**Disaster recovery:** [docs/backup/README.md](../docs/backup/README.md) — `restore.sh`, `restore-staging.sh`, RPO/RTO, drill checklist.

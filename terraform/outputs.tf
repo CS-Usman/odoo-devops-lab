@@ -61,3 +61,8 @@ output "eso_managed_identity_client_id" {
   description = "Workload identity client ID for External Secrets Operator"
   value       = azurerm_user_assigned_identity.eso.client_id
 }
+
+output "backup_managed_identity_client_id" {
+  description = "Workload identity client ID for the Odoo backup CronJob"
+  value       = azurerm_user_assigned_identity.backup.client_id
+}

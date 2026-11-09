@@ -6,6 +6,7 @@
 | **AKS** | **2 worker VMs** (fixed pool) |
 | **PostgreSQL Flexible Server** | **Production database only** (`odoo_devops_lab`) |
 | **Storage account (Blob, HNS)** | Backups + `odoo-prod-filestore` + `odoo-staging-filestore` |
+| **Backup workload identity** | CronJob `odoo-backup` → Blob (see `identity_backup.tf`) |
 
 Staging PostgreSQL is **not** in Terraform — it runs on AKS (`helm/postgres-staging`).
 
@@ -25,10 +26,11 @@ terraform apply
 terraform output aks_get_credentials_command
 terraform output -raw postgres_fqdn
 terraform output storage_account_name
+terraform output -raw backup_managed_identity_client_id
 terraform output odoo_prod_filestore_container_name
 ```
 
-See [k8s/storage/README.md](../../k8s/storage/README.md) for Blob Fuse / filestore sync.
+See [k8s/storage/README.md](../../k8s/storage/README.md) for Blob layout · [backup/README.md](../backup/README.md) for disaster recovery.
 
 ## Cost note
 

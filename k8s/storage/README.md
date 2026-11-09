@@ -4,12 +4,18 @@
 
 Odoo stores uploads (PDFs, images, attachments) on **disk** called the **filestore**, separate from PostgreSQL.
 
-In your lab today, the **running pod** uses a **Kubernetes PVC** — one disk attached to **one pod** at a time (**ReadWriteOnce**). That is simple and cheap, but it means:
+| Environment | Live filestore | Access |
+|-------------|----------------|--------|
+| **Production** | PVC **`odoo-prod-filestore-rwx`** | **Azure File** (`azurefile-csi`), **ReadWriteMany** — **2** `odoo-prod-web` pods |
+| **Staging** | PVC **`odoo-staging-filestore`** | **Azure Disk** (`managed-csi`), **ReadWriteOnce** — **1** web pod |
 
-- You cannot safely run **two prod web pods** on the same filestore unless they share storage.
-- **Azure Blob** is your **off-cluster copy** of that filestore (backup + staging refresh), not always mounted live in every pod.
+**Azure Blob** remains the **backup and refresh** layer (not the live mount for prod anymore):
 
-So: **database in Azure Postgres**, **live files on PVC**, **canonical copy in Blob**. Until you mount Blob inside the pod (Blob Fuse CSI) or sync on a schedule, scaling web replicas will hit “wrong or missing attachments” — that is the blob vs PVC gap, not a broken storage account.
+- `odoo-backups`, `odoo-prod-filestore`, `odoo-staging-filestore` containers
+- Scripts: `backup.sh`, **CronJob `odoo-backup`**, `restore.sh`, `sync-filestore-blob.sh`, `refresh-staging-from-prod.sh`
+- **DR guide:** [docs/backup/README.md](../../docs/backup/README.md)
+
+**One-time prod migration** (disk RWO → Azure File RWX): `./scripts/migrate-prod-filestore-rwx.sh`
 
 ---
 
@@ -23,12 +29,20 @@ Odoo attachments/filestore use **Azure Blob** (not Azure Files):
 
 Terraform creates these on the storage account from `terraform output storage_account_name`.
 
-## Production (multi pod)
+## Production (multi pod) — default in this lab
 
-Mount the **prod** blob container with [Blob Fuse CSI](https://learn.microsoft.com/en-us/azure/storage/blobs/azure-blob-fuse-2) so **odoo-prod-web** replicas share the same path, or run `./scripts/sync-filestore-blob.sh push prod` on a schedule and after deploys.
-
-Example StorageClass manifest: configure account + container from Terraform outputs (HNS enabled on the storage account).
+**Azure File RWX** via Helm (`environments/production/values.yaml`). Alternative for advanced labs: [Blob Fuse CSI](https://learn.microsoft.com/en-us/azure/storage/blobs/azure-blob-fuse-2) or scheduled `sync-filestore-blob.sh push prod`.
 
 ## Staging (single pod)
 
 Staging Odoo uses a **local PVC** (`managed-csi`) on the cluster. Refresh scripts copy prod filestore **Blob → staging Blob → pod**.
+
+## Disaster recovery (summary)
+
+| Need | Use |
+|------|-----|
+| Latest off-cluster copy | `odoo-backups/<date>/` + `odoo-prod-filestore/filestore.tar.gz` |
+| Restore production | `./scripts/restore.sh YYYY-MM-DD` |
+| Rehearse without touching prod | `./scripts/restore-staging.sh YYYY-MM-DD` |
+
+Blob lifecycle (Terraform) trims old dated backups; prod Postgres has separate Azure retention. See [docs/backup/README.md](../../docs/backup/README.md).
