@@ -58,8 +58,11 @@ until kubectl get crd clustersecretstores.external-secrets.io externalsecrets.ex
   sleep 2
 done
 
-export KEY_VAULT_URI ESO_NAMESPACE ESO_SERVICE_ACCOUNT
-envsubst '${KEY_VAULT_URI} ${ESO_NAMESPACE} ${ESO_SERVICE_ACCOUNT}' \
+AZURE_TENANT_ID="${AZURE_TENANT_ID:-$(az account show --query tenantId -o tsv 2>/dev/null || true)}"
+: "${AZURE_TENANT_ID:?az login required for AZURE_TENANT_ID}"
+
+export KEY_VAULT_URI ESO_NAMESPACE ESO_SERVICE_ACCOUNT AZURE_TENANT_ID
+envsubst '${KEY_VAULT_URI} ${ESO_NAMESPACE} ${ESO_SERVICE_ACCOUNT} ${AZURE_TENANT_ID}' \
   <"${ESO_DIR}/cluster-secret-store-azurekv.yaml.tpl" | kubectl apply -f -
 
 kubectl create namespace odoo --dry-run=client -o yaml | kubectl apply -f -

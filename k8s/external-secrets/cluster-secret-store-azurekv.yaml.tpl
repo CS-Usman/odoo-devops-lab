@@ -7,6 +7,7 @@ spec:
     azurekv:
       authType: WorkloadIdentity
       vaultUrl: "${KEY_VAULT_URI}"
+      tenantId: "${AZURE_TENANT_ID}"
       serviceAccountRef:
         name: ${ESO_SERVICE_ACCOUNT}
         namespace: ${ESO_NAMESPACE}

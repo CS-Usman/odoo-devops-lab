@@ -1,21 +1,34 @@
 {{- if .Values.ingress.enabled }}
+{{- $issuer := .Values.ingress.certManager.clusterIssuer | default "" }}
+{{- $tlsSecret := .Values.ingress.tls.secretName | default (printf "%s-tls" (include "odoo.fullname" .)) }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "odoo.fullname" . }}
   labels:
     {{- include "odoo.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    {{- if $issuer }}
+    cert-manager.io/cluster-issuer: {{ $issuer | quote }}
+    {{- end }}
+    {{- if or $issuer .Values.ingress.tls.enabled }}
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
   {{- end }}
-  {{- if .Values.ingress.tls }}
+  {{- if or .Values.ingress.tls.enabled $issuer }}
   tls:
-    {{- range .Values.ingress.tls }}
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ $tlsSecret }}
+  {{- else if .Values.ingress.tls.hosts }}
+  tls:
+    {{- range .Values.ingress.tls.hosts }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
@@ -27,6 +40,15 @@ spec:
     - host: {{ required "ingress.host is required when ingress.enabled" .Values.ingress.host | quote }}
       http:
         paths:
+          {{- if .Values.ingress.websocket.enabled }}
+          - path: {{ .Values.ingress.websocket.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "odoo.fullname" . }}
+                port:
+                  number: {{ .Values.service.longpollingPort }}
+          {{- end }}
           {{- if .Values.ingress.longPolling.enabled }}
           - path: {{ .Values.ingress.longPolling.path }}
             pathType: Prefix

@@ -1,5 +1,9 @@
-# Set host to your public name or <LB-IP-with-dashes>.sslip.io (see docs/aks/INGRESS.md).
+# LB IP 134.33.199.248 → sslip.io host; TLS via cert-manager (LETSENCRYPT_EMAIL at install).
 ingress:
-  enabled: false
-  host: ""
-  tls: []
+  enabled: true
+  host: 134-33-199-248.sslip.io
+  certManager:
+    clusterIssuer: letsencrypt-prod
+  tls:
+    enabled: true
+    secretName: odoo-prod-tls
