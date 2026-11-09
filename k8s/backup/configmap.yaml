@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odoo-backup-config
+  namespace: odoo
+  labels:
+    app.kubernetes.io/name: odoo-backup
+data:
+  # Patched by scripts/install-backup-cronjob.sh
+  AZURE_STORAGE_ACCOUNT: "STORAGE_ACCOUNT_PLACEHOLDER"
+  AZURE_CLIENT_ID: "CLIENT_ID_PLACEHOLDER"
+  AZURE_STORAGE_CONTAINER: "odoo-backups"
+  ODOO_PROD_FILESTORE_CONTAINER: "odoo-prod-filestore"
+  FILESTORE_CLAIM: "odoo-prod-filestore-rwx"

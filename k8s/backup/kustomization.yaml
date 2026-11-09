@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - cronjob.yaml
+configMapGenerator:
+  - name: odoo-backup-scripts
+    namespace: odoo
+    files:
+      - upload.sh=upload.sh
+    options:
+      disableNameSuffixHash: true

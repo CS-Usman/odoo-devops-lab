@@ -141,9 +141,20 @@ In Argo UI (port-forward):
 kubectl -n argocd port-forward svc/argocd-server 8081:80
 ```
 
-Sync order: `postgres-staging` → `pgbouncer` → `odoo-prod` → `odoo-staging`.
+Sync order: `postgres-staging` → `pgbouncer` → `odoo-prod` → `odoo-staging` → `odoo-backup`.
 
-## 9. First staging data from production
+## 9. Automated backups (disaster recovery)
+
+After prod is running and `odoo-prod-filestore-rwx` exists:
+
+```bash
+./scripts/install-backup-cronjob.sh
+kubectl -n odoo create job --from=cronjob/odoo-backup odoo-backup-test-$(date +%s)
+```
+
+Nightly **02:00 UTC** on the cluster. Restore and DR scenarios: **[backup/README.md](backup/README.md)**.
+
+## 10. First staging data from production
 
 After prod pods run and Azure DB is initialized (first Odoo start / module install):
 
@@ -151,13 +162,13 @@ After prod pods run and Azure DB is initialized (first Odoo start / module insta
 ./scripts/refresh-staging-from-prod.sh
 ```
 
-## 10. CI / image pull (when ready)
+## 11. CI / image pull (when ready)
 
 - GitHub Actions pushes to GHCR.
 - Create `kubectl -n odoo create secret docker-registry ghcr-pull ...` if the image is private.
 - See [cicd/README.md](cicd/README.md).
 
-## 11. Smoke test
+## 12. Smoke test
 
 Port-forward (fallback):
 

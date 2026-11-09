@@ -27,10 +27,11 @@ flowchart TB
   end
 
   subgraph P4["④ Runtime — AKS (2 nodes)"]
-    PROD["odoo-prod-web → PgBouncer×2 → Azure Postgres"]
-    STG["odoo-staging-web → postgres-staging (in-cluster)"]
-    BLOB["Azure Blob: filestore + backups"]
-    PVC["PVC filestore (RWO) + refresh scripts"]
+    PROD["odoo-prod-web ×2 → PgBouncer×2 → Azure Postgres"]
+    STG["odoo-staging-web ×1 → postgres-staging"]
+    AFILE["Azure File RWX — prod live filestore"]
+    BLOB["Azure Blob — backups + refresh"]
+    DISK["Disk RWO — staging live filestore"]
   end
 
   subgraph P5["⑤ Observe & respond"]
@@ -42,7 +43,7 @@ flowchart TB
   end
 
   subgraph P6["⑥ Ops & DR"]
-    BK["Backup / refresh-staging-from-prod"]
+    BK["Backup CronJob + refresh-staging-from-prod"]
     RUN["RUNBOOK + port-forward access"]
     NEU["odoo neutralize (staging DB)"]
   end
@@ -60,8 +61,11 @@ flowchart TB
   GHA --> PC --> GL --> TV --> GHCR --> TAGP --> ARGO
   ARGO --> HELM --> PROD
   ARGO --> STG
+  HELM --> AFILE
   HELM --> BLOB
-  HELM --> PVC
+  HELM --> DISK
+  PROD --> AFILE
+  STG --> DISK
   ARGO --> PROM --> GRAF
   PROM --> BB
   LOKI --> GRAF
@@ -83,12 +87,13 @@ flowchart TB
 
 | Layer | Technology |
 |-------|------------|
-| Compute | **AKS** — **2 worker VMs** (fixed pool) |
-| App | **Helm** — Odoo web + dedicated cron, rolling updates, PDB, HPA |
-| DB pool | **PgBouncer** → single Azure Postgres Flexible Server |
-| Filestore | **Azure Blob** — prod/staging containers + backup archives |
-| Staging DB | **In-cluster PostgreSQL** — refresh from prod via scripts |
-| IaC | **Terraform** — VNet, AKS, Postgres, storage |
+| Compute | **AKS** — **2 worker nodes**; prod **2×** Odoo web (spread across nodes) |
+| App | **Helm** — Odoo 17, PDB, topology spread; staging **1×** web |
+| DB pool | **PgBouncer (×2)** → Azure Postgres Flexible Server (private VNet) |
+| Prod filestore | **Azure File CSI (RWX)** — shared by both prod web pods |
+| Blob / backup & DR | **Azure Blob** — nightly **CronJob `odoo-backup`**, `backup.sh`, `restore.sh` — [DR guide](docs/backup/README.md) |
+| Staging DB / files | **In-cluster Postgres** + **disk RWO** — refresh from prod scripts |
+| IaC | **Terraform** — VNet, AKS, Postgres, Blob, **Key Vault**, ESO identity |
 | CI | **GitHub Actions** — lint, Trivy, push **GHCR** (immutable SHA tags) |
 | CD | **Argo CD** — sync Helm values from git |
 | Secrets | **Azure Key Vault** + External Secrets (default); Vault optional |
@@ -106,8 +111,9 @@ flowchart TB
 ├── k8s/argocd/             # Argo CD Applications (ingress, cert-manager, monitoring, …)
 ├── k8s/cert-manager/       # Let's Encrypt ClusterIssuer template
 ├── k8s/external-secrets/   # Azure Key Vault ExternalSecrets
+├── k8s/backup/             # Automated backup CronJob (workload identity)
 ├── k8s/storage/            # Blob filestore notes
-├── scripts/                # bootstrap, backup, staging refresh — see scripts/README.md
+├── scripts/                # bootstrap, backup, restore, staging refresh — see scripts/README.md
 ├── terraform/              # Azure infrastructure
 ├── docs/                   # Guides
 └── docker-compose.yml      # Local development
@@ -142,10 +148,10 @@ export LETSENCRYPT_EMAIL='you@example.com' && ./scripts/install-cert-manager.sh
 | Topic | Guide |
 |-------|--------|
 | Overview | [docs/README.md](docs/README.md) |
-| AKS + Helm | [docs/aks/README.md](docs/aks/README.md) · [Architecture](docs/aks/ARCHITECTURE.md) |
+| AKS + tool stack | [docs/aks/README.md](docs/aks/README.md) · **[Architecture](docs/aks/ARCHITECTURE.md)** (full inventory) |
 | Terraform | [docs/terraform/README.md](docs/terraform/README.md) |
 | CI/CD & GitOps | [docs/cicd/README.md](docs/cicd/README.md) |
-| Backups & DR | [docs/backup/README.md](docs/backup/README.md) |
+| **Backups & disaster recovery** | [docs/backup/README.md](docs/backup/README.md) — RPO/RTO, restore scenarios, drills |
 | Monitoring | [docs/monitoring/README.md](docs/monitoring/README.md) |
 | Secrets / Key Vault | [docs/secrets/README.md](docs/secrets/README.md) |
 | Ingress | [docs/aks/INGRESS.md](docs/aks/INGRESS.md) |

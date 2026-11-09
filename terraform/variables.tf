@@ -114,3 +114,15 @@ variable "eso_service_account" {
   type        = string
   default     = "external-secrets"
 }
+
+variable "backup_namespace" {
+  description = "Namespace for the Odoo backup CronJob"
+  type        = string
+  default     = "odoo"
+}
+
+variable "backup_service_account" {
+  description = "Service account for backup workload identity"
+  type        = string
+  default     = "odoo-backup"
+}
