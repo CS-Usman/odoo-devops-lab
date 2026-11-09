@@ -1,4 +1,9 @@
+# nip.io: staging.<LB-IP-dots>.nip.io resolves to the same LoadBalancer IP as prod sslip.io.
 ingress:
-  enabled: false
-  host: ""
-  tls: []
+  enabled: true
+  host: staging.134.33.199.248.nip.io
+  certManager:
+    clusterIssuer: letsencrypt-prod
+  tls:
+    enabled: true
+    secretName: odoo-staging-tls

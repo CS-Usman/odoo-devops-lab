@@ -12,6 +12,7 @@ Copy [.env.azure.example](../.env.azure.example) → `.env`.
 | **seed-keyvault-secrets.sh** | DB creds → Azure Key Vault (default) |
 | **install-external-secrets-azure.sh** | ESO + Key Vault → K8s secrets |
 | **install-ingress.sh** | ingress-nginx LB + sslip.io host hint |
+| **install-cert-manager.sh** | cert-manager + Let's Encrypt ClusterIssuer |
 | **seed-aks-db-secret.sh** | Fallback: create secrets directly in etcd |
 | **bootstrap-aks.sh** | First deploy after Terraform |
 | **deploy-aks-apps.sh** | Helm: postgres-staging → pgbouncer → odoo-prod → odoo-staging |

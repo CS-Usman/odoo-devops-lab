@@ -33,12 +33,33 @@ Edit and push:
 
 Argo CD apps already include these value files on `main` / `staging`.
 
-## TLS (optional)
+## TLS (Let's Encrypt)
 
-1. Install [cert-manager](https://cert-manager.io/) and a `ClusterIssuer` (Let’s Encrypt), or
-2. Terminate TLS at a future Application Gateway.
+```bash
+export LETSENCRYPT_EMAIL='you@example.com'
+./scripts/install-cert-manager.sh
+# or: kubectl apply -f k8s/argocd/applications/cert-manager.yaml (then apply ClusterIssuer via script)
+```
 
-Until then, use `http://` for smoke tests or self-signed secrets in `ingress.tls`.
+Helm: `ingress.certManager.clusterIssuer: letsencrypt-prod` + `ingress.tls.enabled: true` in `environments/production/ingress.yaml`.
+
+Cert-manager creates secret `odoo-prod-tls`; nginx redirects HTTP → HTTPS.
+
+| Env | Public URL |
+|-----|------------|
+| Prod | `https://134-33-199-248.sslip.io` |
+| Staging | `https://staging.<LB-IP-dots>.nip.io` (e.g. `https://staging.134.33.199.248.nip.io`) |
+
+`staging-…-sslip.io` is **not** a valid sslip.io pattern — nginx returns **404** without an Ingress rule.
+
+Smoke test:
+
+```bash
+SMOKE_URL=https://134-33-199-248.sslip.io ./scripts/smoke-test.sh
+STAGING_SMOKE_URL=https://staging.134.33.199.248.nip.io ./scripts/smoke-test.sh
+```
+
+Alternative: terminate TLS at Application Gateway (not default in this lab).
 
 ## Odoo proxy mode
 

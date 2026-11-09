@@ -41,7 +41,12 @@ Grafana → Explore → Loki → `{namespace="odoo"}`
 
 Custom rules: `helm/monitoring/prometheus-rules-odoo-lab.yaml` (synced via Application `monitoring-manifests`).
 
-Port-forward Prometheus and Alertmanager for debugging (see end of `install-monitoring.sh` output).
+Port-forward Prometheus and Alertmanager for debugging:
+
+```bash
+kubectl -n monitoring port-forward svc/monitoring-prometheus 9090:9090
+kubectl -n monitoring port-forward svc/monitoring-alertmanager 9093:9093
+```
 
 ## Resources
 

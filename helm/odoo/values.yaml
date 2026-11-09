@@ -71,10 +71,21 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "7200"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
   longPolling:
     enabled: true
     path: /longpolling
-  tls: []
+  # Odoo 17+ bus uses /websocket on the gevent port (8072), not only /longpolling.
+  websocket:
+    enabled: true
+    path: /websocket
+  certManager:
+    # Set to letsencrypt-prod after ./scripts/install-cert-manager.sh
+    clusterIssuer: ""
+  tls:
+    enabled: false
+    secretName: ""
+    hosts: []
 
 securityContext:
   runAsNonRoot: true
