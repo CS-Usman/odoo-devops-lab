@@ -5,7 +5,9 @@
 Odoo Services stay **ClusterIP** inside the cluster. **ingress-nginx** gets an **Azure LoadBalancer IP** and routes HTTP from the internet to `odoo-prod` / `odoo-staging`.
 
 ```text
-Internet → Azure LB → ingress-nginx → Ingress → odoo-prod-web:8069 (+ /longpolling → 8072)
+Internet → Azure LB → ingress-nginx → TLS (cert-manager) → Ingress
+  /  → odoo-prod-web:8069
+  /websocket, /longpolling → odoo-prod-web:8072   (Odoo 17 bus)
 ```
 
 Application Gateway in older docs is optional (WAF, certificates at edge). This lab’s **default path** is **ingress-nginx** (GitOps: `k8s/argocd/applications/ingress-nginx.yaml`).
@@ -68,6 +70,8 @@ Helm sets `proxyMode: true` so Odoo trusts `X-Forwarded-*` headers from nginx.
 ## Verify
 
 ```bash
-SMOKE_URL=http://<your-host> ./scripts/smoke-test.sh
 kubectl -n odoo get ingress
+kubectl -n cert-manager get clusterissuer
+kubectl -n odoo get certificate
+curl -I "https://<prod-host>/web/login"
 ```

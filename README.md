@@ -47,8 +47,9 @@ flowchart TB
     NEU["odoo neutralize (staging DB)"]
   end
 
-  subgraph P7["⑦ Edge & secrets"]
-    NGINX["ingress-nginx → public LB"]
+  subgraph P7["⑦ Edge, TLS & secrets"]
+    NGINX["ingress-nginx → Azure LB"]
+    CM["cert-manager → Let's Encrypt"]
     AKV["Key Vault → ESO → K8s secrets"]
     AGW["App Gateway (optional WAF)"]
   end
@@ -70,11 +71,15 @@ flowchart TB
   ADDON --> STG
   BK --> STG
   NEU --> STG
+  CM --> NGINX
   NGINX --> PROD
   NGINX --> STG
   AKV --> PROD
+  AKV --> STG
   AGW -.-> NGINX
 ```
+
+**Public URLs (after ingress + TLS):** prod `https://<ip-dashes>.sslip.io` · staging `https://staging.<LB-IP-dots>.nip.io` — see [docs/aks/INGRESS.md](docs/aks/INGRESS.md). Odoo 17 routes **`/websocket` → 8072** via ingress (bus / live updates).
 
 | Layer | Technology |
 |-------|------------|
@@ -87,7 +92,8 @@ flowchart TB
 | CI | **GitHub Actions** — lint, Trivy, push **GHCR** (immutable SHA tags) |
 | CD | **Argo CD** — sync Helm values from git |
 | Secrets | **Azure Key Vault** + External Secrets (default); Vault optional |
-| Ingress | **ingress-nginx** LoadBalancer — see [docs/aks/INGRESS.md](docs/aks/INGRESS.md) |
+| Ingress / TLS | **ingress-nginx** + **cert-manager** (Let's Encrypt) — [INGRESS.md](docs/aks/INGRESS.md) |
+| Observability access | **Grafana** port-forward; Loki query `{namespace="odoo"}` — [monitoring](docs/monitoring/README.md) |
 | Local dev | **Docker Compose** — Postgres + Odoo on localhost |
 
 ## Repository layout
@@ -97,7 +103,9 @@ flowchart TB
 ├── helm/odoo/              # Odoo chart (web + cron)
 ├── helm/pgbouncer/         # Connection pooler
 ├── helm/monitoring/        # kube-prometheus-stack, Loki
-├── k8s/argocd/             # Argo CD Applications
+├── k8s/argocd/             # Argo CD Applications (ingress, cert-manager, monitoring, …)
+├── k8s/cert-manager/       # Let's Encrypt ClusterIssuer template
+├── k8s/external-secrets/   # Azure Key Vault ExternalSecrets
 ├── k8s/storage/            # Blob filestore notes
 ├── scripts/                # bootstrap, backup, staging refresh — see scripts/README.md
 ├── terraform/              # Azure infrastructure
@@ -122,7 +130,11 @@ az login && az account set --subscription "<your-sub>"
 cd terraform && cp terraform.tfvars.example terraform.tfvars  # edit unique names
 terraform init && terraform apply
 ./scripts/seed-keyvault-secrets.sh   # or seed-aks-db-secret.sh (fallback)
-./scripts/bootstrap-aks.sh && ./scripts/install-ingress.sh
+./scripts/install-external-secrets-azure.sh
+./scripts/bootstrap-aks.sh
+./scripts/install-ingress.sh
+export LETSENCRYPT_EMAIL='you@example.com' && ./scripts/install-cert-manager.sh
+# Enable hosts in helm/odoo/environments/*/ingress.yaml → push → Argo sync
 ```
 
 ## Documentation

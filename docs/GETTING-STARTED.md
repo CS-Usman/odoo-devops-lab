@@ -118,9 +118,15 @@ export DB_USER=odooadmin
 export DB_PASSWORD='...'
 export STAGING_DB_PASSWORD='...'
 
-./scripts/seed-aks-db-secret.sh
+./scripts/seed-keyvault-secrets.sh    # preferred (Key Vault + ESO)
+# or: ./scripts/seed-aks-db-secret.sh
+./scripts/install-external-secrets-azure.sh
 ./scripts/bootstrap-aks.sh
+./scripts/install-ingress.sh
+export LETSENCRYPT_EMAIL='you@example.com' && ./scripts/install-cert-manager.sh
 ```
+
+Set `ingress.enabled`, host, and TLS in `helm/odoo/environments/production/ingress.yaml` (and staging on branch `staging`). Push → Argo sync `odoo-prod` / `odoo-staging`. Details: [aks/INGRESS.md](aks/INGRESS.md).
 
 ## 8. GitOps (recommended)
 
@@ -153,18 +159,21 @@ After prod pods run and Azure DB is initialized (first Odoo start / module insta
 
 ## 11. Smoke test
 
-Until Application Gateway + DNS exist:
+Port-forward (fallback):
 
 ```bash
-kubectl -n odoo port-forward svc/odoo-prod-web 8069:8069
-# SMOKE_URL=http://127.0.0.1:8069 ./scripts/smoke-test.sh
+kubectl -n odoo port-forward svc/odoo-prod 8069:8069
+kubectl -n odoo port-forward svc/odoo-staging 8071:8069
 ```
 
-With public URL:
+Public HTTPS (after [INGRESS.md](aks/INGRESS.md) — replace with your LB IP):
 
 ```bash
-SMOKE_URL=https://odoo.example.com ./scripts/smoke-test.sh
+SMOKE_URL=https://134-33-199-248.sslip.io ./scripts/smoke-test.sh
+STAGING_SMOKE_URL=https://staging.134.33.199.248.nip.io ./scripts/smoke-test.sh
 ```
+
+Monitoring: `kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80` → Explore → Loki → `{namespace="odoo"}`.
 
 ## Local Odoo only (no Azure cost)
 
