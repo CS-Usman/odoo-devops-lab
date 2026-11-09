@@ -35,7 +35,15 @@ kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80
 
 ## Logs
 
-Grafana → Explore → Loki → `{namespace="odoo"}`
+Grafana → Explore → **Code** (not empty Builder) → Loki:
+
+```logql
+{namespace="odoo"}
+{namespace="odoo", pod=~"odoo-prod.*"}
+{namespace="odoo", pod=~"odoo-staging.*"}
+```
+
+Prometheus UI: `kubectl -n monitoring port-forward svc/monitoring-prometheus 9090:9090`
 
 ## Alerts
 

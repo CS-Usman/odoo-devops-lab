@@ -13,9 +13,11 @@
 | [backup/README.md](backup/README.md) | Backups and staging refresh |
 | [monitoring/README.md](monitoring/README.md) | Prometheus, Grafana, Loki |
 | [secrets/README.md](secrets/README.md) | Azure Key Vault + External Secrets (default) |
-| [aks/INGRESS.md](aks/INGRESS.md) | ingress-nginx + Odoo Ingress |
+| [aks/INGRESS.md](aks/INGRESS.md) | ingress-nginx, TLS (cert-manager), prod/staging URLs |
 | [vault/README.md](vault/README.md) | HashiCorp Vault (optional) |
 | [docker/README.md](docker/README.md) | Local Compose only |
 | [RUNBOOK.md](RUNBOOK.md) | Day-2 operations |
 
-**Path:** local Docker (optional) → Terraform → seed secrets → bootstrap → Argo CD (apps + **monitoring**) → refresh staging.
+**Path:** local Docker (optional) → Terraform → Key Vault + ESO → bootstrap → Argo CD (apps + **monitoring**) → ingress + **cert-manager** → refresh staging.
+
+**Live stack (example):** [GETTING-STARTED.md](GETTING-STARTED.md) · public Odoo URLs in [aks/INGRESS.md](aks/INGRESS.md) · logs in Grafana Explore → Loki `{namespace="odoo"}`.
