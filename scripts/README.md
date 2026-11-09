@@ -27,6 +27,7 @@ Copy [.env.azure.example](../.env.azure.example) → `.env`.
 | **install-external-secrets.sh** | ESO + Vault manifests |
 | **vault-seed-secrets.sh** / **vault-bootstrap-k8s-auth.sh** | Optional Vault |
 | **install-blobfuse-csi.sh** | Pointer to Blob Fuse docs (optional CSI) |
+| **migrate-prod-filestore-rwx.sh** | RWO disk → Azure File RWX for 2+ prod web pods |
 
 Shared helpers: [lib/common.sh](lib/common.sh)
 

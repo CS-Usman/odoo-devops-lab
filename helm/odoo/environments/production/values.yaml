@@ -1,17 +1,17 @@
 web:
-  replicas: 1
+  replicas: 2
   maxCronThreads: 1
 
 cron:
-  # Separate cron pod shares RWO filestore PVC with web — only one can mount; use web maxCronThreads until Blob RWX.
   enabled: false
   replicas: 0
 
 persistence:
-  # Prefer Blob Fuse CSI → odoo-prod-filestore container (see k8s/storage/README.md).
-  storageClass: managed-csi
-  accessMode: ReadWriteOnce
+  # Azure File RWX — shared across odoo-prod-web replicas (see scripts/migrate-prod-filestore-rwx.sh).
+  storageClass: azurefile-csi
+  accessMode: ReadWriteMany
   size: 32Gi
+  existingClaim: odoo-prod-filestore-rwx
 
 podDisruptionBudget:
   enabled: true
@@ -19,6 +19,6 @@ podDisruptionBudget:
 
 autoscaling:
   enabled: false
-  minReplicas: 1
+  minReplicas: 2
   maxReplicas: 2
   targetCPUUtilizationPercentage: 75
